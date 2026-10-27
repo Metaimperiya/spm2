@@ -2,7 +2,7 @@ import asyncio
 import os
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
-from aiogram.types import Message, CallbackQuery
+from aiogram.types import Message, CallbackQuery, Update
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from fastapi import FastAPI
 import uvicorn
@@ -52,18 +52,20 @@ async def classes(call: CallbackQuery):
 @app.on_event("startup")
 async def on_startup():
     if WEBHOOK_URL:
-        # Принудительно чистим старые зависшие вебхуки и ставим свежий
         await bot.delete_webhook(drop_pending_updates=True)
         webhook_path = f"{WEBHOOK_URL}/webhook"
         await bot.set_webhook(webhook_path)
-        print(f"Webhook установлен на {webhook_path}")
+        print(f"Webhook успешно установлен на {webhook_path}")
 
 @app.post("/webhook")
 async def webhook(update: dict):
-    from aiogram.types import Update
     telegram_update = Update(**update)
     await dp.feed_update(bot, telegram_update)
     return {"ok": True}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 @app.get("/")
 async def index():
