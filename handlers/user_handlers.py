@@ -28,6 +28,28 @@ async def open_bottom_menu(message: Message, state: FSMContext):
     await state.clear()
     await message.answer("🚀 **Главное меню:**", reply_markup=main_menu(), parse_mode="Markdown")
 
+@router.callback_query(F.data == "back_main")
+async def back_main(call: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await call.message.edit_text("🚀 **Главное меню:**", reply_markup=main_menu(), parse_mode="Markdown")
+    await call.answer()
+
+# --- ПОДАЧА ОБЪЯВЛЕНИЯ (ГЛАВНАЯ КНОПКА) ---
+@router.callback_query(F.data == "create_ad")
+async def start_create_ad(call: CallbackQuery, state: FSMContext):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="🚗 Продать машину", callback_data="car_sell")
+    kb.button(text="👤 Продать аккаунт", callback_data="acc_sell")
+    kb.button(text="⬅️ Назад", callback_data="back_main")
+    kb.adjust(1, 1, 1)
+    
+    await call.message.edit_text(
+        "📢 **Подача объявления**\n\nВыбери, что ты хочешь выставить:",
+        reply_markup=kb.as_markup(),
+        parse_mode="Markdown"
+    )
+    await call.answer()
+
 # --- АВТОМОБИЛИ ---
 @router.callback_query(F.data == "menu_cars")
 async def show_cars(call: CallbackQuery):
@@ -36,16 +58,22 @@ async def show_cars(call: CallbackQuery):
 
 @router.callback_query(F.data == "car_sell")
 async def start_car_sell(call: CallbackQuery, state: FSMContext):
-    await state.set_state(AdForm.category)
+    await state.set_state(AdForm.photo)
     await state.update_data(category="car", ad_type="sale")
     await call.message.edit_text("📸 **Отправь фото машины:**", parse_mode="Markdown")
-    await state.set_state(AdForm.photo)
     await call.answer()
 
 # --- АККАУНТЫ ---
 @router.callback_query(F.data == "menu_accs")
 async def show_accs(call: CallbackQuery):
     await call.message.edit_text("👤 **Аккаунты**", reply_markup=accs_menu())
+    await call.answer()
+
+@router.callback_query(F.data == "acc_sell")
+async def start_acc_sell(call: CallbackQuery, state: FSMContext):
+    await state.set_state(AdForm.photo)
+    await state.update_data(category="acc", ad_type="sale")
+    await call.message.edit_text("📸 **Отправь скриншот аккаунта:**", parse_mode="Markdown")
     await call.answer()
 
 # --- МОНЕТЫ ---
@@ -68,15 +96,59 @@ async def show_community(call: CallbackQuery):
     await call.message.edit_text("💬 **Наше сообщество:**", reply_markup=community_menu(channels))
     await call.answer()
 
-@router.callback_query(F.data == "back_main")
-async def back_main(call: CallbackQuery, state: FSMContext):
-    await state.clear()
-    await call.message.edit_text("🚀 **Главное меню:**", reply_markup=main_menu(), parse_mode="Markdown")
-    await call.answer()
-
-# --- СБОР ФОТО (ЗАГЛУШКА ДЛЯ ПРИМЕРА) ---
+# --- СБОР ДАННЫХ ДЛЯ ОБЪЯВЛЕНИЯ ---
 @router.message(AdForm.photo, F.photo)
 async def process_photo(message: Message, state: FSMContext):
     await state.update_data(photo=message.photo[-1].file_id)
     await state.set_state(AdForm.title)
     await message.answer("📝 **Напиши заголовок объявления:**", parse_mode="Markdown")
+
+@router.message(AdForm.title, F.text)
+async def process_title(message: Message, state: FSMContext):
+    await state.update_data(title=message.text)
+    await state.set_state(AdForm.description)
+    await message.answer("📝 **Напиши описание** (характеристики, цена):", parse_mode="Markdown")
+
+@router.message(AdForm.description, F.text)
+async def process_description(message: Message, state: FSMContext):
+    await state.update_data(description=message.text)
+    await state.set_state(AdForm.price)
+    await message.answer("💰 **Укажи цену:**", parse_mode="Markdown")
+
+@router.message(AdForm.price, F.text)
+async def process_price(message: Message, state: FSMContext):
+    await state.update_data(price=message.text)
+    await state.set_state(AdForm.game_id)
+    await message.answer("🆔 **Введи свой игровой ID:**", parse_mode="Markdown")
+
+@router.message(AdForm.game_id, F.text)
+async def process_game_id(message: Message, state: FSMContext):
+    await state.update_data(game_id=message.text)
+    await state.set_state(AdForm.contact)
+    await message.answer("📞 **Контакт для связи (@username):**", parse_mode="Markdown")
+
+@router.message(AdForm.contact, F.text)
+async def process_contact(message: Message, state: FSMContext):
+    await state.update_data(contact=message.text)
+    data = await state.get_data()
+    
+    # Сохраняем в БД со статусом "На модерации"
+    ad_id = add_ad(
+        user_id=message.from_user.id,
+        category=data['category'],
+        ad_type=data['ad_type'],
+        title=data['title'],
+        description=data['description'],
+        price=data['price'],
+        game_id=data['game_id'],
+        contact=data['contact'],
+        photo_id=data['photo']
+    )
+    
+    await state.clear()
+    await message.answer(
+        f"✅ **Объявление #{ad_id} отправлено на модерацию!**\n\n"
+        "Администратор проверит его, и после одобрения оно появится в каналах.",
+        reply_markup=main_menu(),
+        parse_mode="Markdown"
+    )
