@@ -5,7 +5,7 @@ class AdForm(StatesGroup):
     description = State(); price = State(); game_id = State(); contact = State()
 
 class RaceForm(StatesGroup):
-    race_type = State(); game_nick = State(); game_id = State(); car = State()
+    race_type = State(); game_id = State(); car = State() # Убрали game_nick
 
 class AdminAdForm(StatesGroup):
     photo = State(); description = State()
