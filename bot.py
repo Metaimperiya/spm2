@@ -6,16 +6,15 @@ from aiogram import Bot, Dispatcher
 from aiogram.types import Update
 from contextlib import asynccontextmanager
 
-# Импортируем из нашей папки handlers
 from handlers import user_handlers, admin_handlers, member_handlers
 from database import init_db
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
-# ТВОИ ДАННЫЕ (Эти переменные импортируются в другие файлы)
+# --- ГЛАВНЫЕ НАСТРОЙКИ ---
 ADMIN_USERNAME = "metaimperiya"
-ADMIN_IDS = [123456789, 987654321] # <-- ВПИШИ СВОИ ID!
+ADMIN_IDS = [123456789, 987654321] # <-- ВПИШИ СВОИ ID (узнать у @userinfobot)
 MAIN_CLAN_CHANNEL = "@cpm_2_clan"
 SALE_CHANNEL = "@cpm_2_sale"
 TRADE_CHANNEL = "@cpm_2_trade"
