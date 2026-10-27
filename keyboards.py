@@ -4,6 +4,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
 
+# НИЖНЯЯ КЛАВИАТУРА (КНОПКА ВОЗВРАЩЕНА)
 def bottom_menu():
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -31,7 +32,7 @@ def cars_menu():
     kb = InlineKeyboardBuilder()
     kb.button(text="💰 Продать машину", callback_data="car_sell")
     kb.button(text="🔄 Обменять машину", callback_data="car_trade")
-    kb.button(text="🛒 Купить машину", callback_data="buy_car_catalog") # Теперь каталог
+    kb.button(text="🛒 Купить машину", callback_data="buy_car_catalog")
     kb.button(text="⬅️ Назад", callback_data="back_main")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
@@ -39,7 +40,7 @@ def cars_menu():
 def accs_menu():
     kb = InlineKeyboardBuilder()
     kb.button(text="💰 Продать аккаунт", callback_data="acc_sell")
-    kb.button(text="🛒 Купить аккаунт", callback_data="buy_acc_catalog") # Теперь каталог
+    kb.button(text="🛒 Купить аккаунт", callback_data="buy_acc_catalog")
     kb.button(text="⬅️ Назад", callback_data="back_main")
     kb.adjust(1, 1, 1)
     return kb.as_markup()
@@ -66,12 +67,16 @@ def community_menu():
     kb.adjust(2, 2, 2, 1, 1)
     return kb.as_markup()
 
-def universal_post_keyboard():
+# Кнопки для поста (когда юзер или админ их добавляет)
+def custom_post_kb(buttons_list):
     kb = InlineKeyboardBuilder()
-    kb.button(text="🌐 Наш сайт", url=SITE_URL)
-    kb.button(text="💬 Написать админу", url=f"https://t.me/{ADMIN_USERNAME}")
-    kb.button(text="🛡️ Клан", url="https://t.me/cpm_2_clan")
-    kb.adjust(1, 2)
+    for btn in buttons_list:
+        try:
+            name, url = btn.split("|")
+            kb.button(text=name.strip(), url=url.strip())
+        except:
+            pass
+    kb.adjust(1)
     return kb.as_markup()
 
 def admin_approve_kb(ad_id):
