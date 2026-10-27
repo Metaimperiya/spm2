@@ -96,13 +96,16 @@ async def ad_desc(message: Message, state: FSMContext):
 async def ad_price(message: Message, state: FSMContext):
     await state.update_data(price=message.text)
     await state.set_state(AdForm.game_id)
-    await message.answer("🆔 **Твой игровой ID:**", parse_mode="Markdown")
+    await message.answer("🆔 **Введи свой игровой ID (только цифры):**\n\n*Он нужен, чтобы покупатель/админ смог добавить тебя в друзья в игре.*", parse_mode="Markdown")
 
 @router.message(AdForm.game_id, F.text)
 async def ad_id(message: Message, state: FSMContext):
+    if not message.text.isdigit():
+        await message.answer("⚠️ **Ошибка!** ID должен состоять только из цифр. Попробуй еще раз:")
+        return
     await state.update_data(game_id=message.text)
     await state.set_state(AdForm.contact)
-    await message.answer("📞 **Контакт для связи (@username):**", parse_mode="Markdown")
+    await message.answer("📞 **Контакт для связи в ТГ (@username):**", parse_mode="Markdown")
 
 @router.message(AdForm.contact, F.text)
 async def ad_contact(message: Message, state: FSMContext, bot: Bot):
@@ -115,7 +118,6 @@ async def ad_contact(message: Message, state: FSMContext, bot: Bot):
         data['title'], data['description'], data['price'], data['game_id'], data['contact'], data['photo']
     )
     
-    # Отправляем на модерацию админам
     from bot import ADMIN_IDS
     from keyboards import admin_approve_kb
     mod_text = (
@@ -125,6 +127,7 @@ async def ad_contact(message: Message, state: FSMContext, bot: Bot):
         f"📦 **Тип:** {data['ad_type']}\n"
         f"📝 **Заголовок:** {data['title']}\n"
         f"💰 **Цена:** {data['price']}\n"
+        f"🆔 **Игровой ID:** `{data['game_id']}`\n"
     )
     for admin_id in ADMIN_IDS:
         try:
@@ -145,9 +148,8 @@ async def show_catalog(call: CallbackQuery):
         await call.answer()
         return
     
-    # Показываем первое объявление (упрощенно)
     ad = ads[0]
-    text = f"🚗 **{ad[5]}**\n\n{ad[6]}\n\n💰 **Цена:** {ad[7]}\n👤 **Продавец:** {ad[2]}\n📞 **Контакт:** {ad[9]}"
+    text = f"🚗 **{ad[5]}**\n\n{ad[6]}\n\n💰 **Цена:** {ad[7]}\n🆔 **Игровой ID:** `{ad[8]}`\n👤 **Продавец:** {ad[2]}\n📞 **Контакт:** {ad[9]}"
     kb = InlineKeyboardBuilder()
     kb.button(text="💬 Написать продавцу", url=f"https://t.me/{ad[9].replace('@', '')}")
     kb.button(text="⬅️ Назад", callback_data="back_main")
@@ -171,18 +173,16 @@ async def start_race(call: CallbackQuery, state: FSMContext):
 async def race_type(call: CallbackQuery, state: FSMContext):
     r_type = "Дрэг" if call.data == "race_drag" else "Дрифт"
     await state.update_data(race_type=r_type)
-    await state.set_state(RaceForm.game_nick)
-    await call.message.edit_text(f"🏎️ **{r_type}**\n\nВведи свой **игровой ник**:")
-    await call.answer()
-
-@router.message(RaceForm.game_nick, F.text)
-async def race_nick(message: Message, state: FSMContext):
-    await state.update_data(game_nick=message.text)
     await state.set_state(RaceForm.game_id)
-    await message.answer("🆔 **Твой игровой ID:**")
+    # ТУТ МЫ УБРАЛИ ВВОД НИКА И СРАЗУ ПРОСИМ ID
+    await call.message.edit_text(f"🏎️ **{r_type}**\n\n🆔 **Введи свой игровой ID (только цифры):**\n\n*Мы добавим тебя в друзья для участия.*", parse_mode="Markdown")
+    await call.answer()
 
 @router.message(RaceForm.game_id, F.text)
 async def race_id(message: Message, state: FSMContext):
+    if not message.text.isdigit():
+        await message.answer("⚠️ **Ошибка!** ID должен состоять только из цифр. Попробуй еще раз:")
+        return
     await state.update_data(game_id=message.text)
     await state.set_state(RaceForm.car)
     await message.answer("🚗 **На какой машине едешь?**")
@@ -192,9 +192,21 @@ async def race_car(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     from bot import ADMIN_IDS
     username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
-    admin_text = f"🚨 **ЗАЯВКА НА ГОНКУ!** 🚨\n━━━━━━━━━━━━━━━━━━━━━━\n👤 **ТГ:** {username}\n🎮 **Ник:** {data['game_nick']}\n🏁 **Тип:** {data['race_type']}\n🆔 **ID:** `{data['game_id']}`\n🚗 **Машина:** {message.text}\n━━━━━━━━━━━━━━━━━━━━━━\n👉 *Добавь его в друзья!*"
+    
+    # В ЗАЯВКЕ ТЕПЕРЬ ТОЛЬКО ID, НИКА НЕТ
+    admin_text = (
+        f"🚨 **ЗАЯВКА НА ГОНКУ!** 🚨\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"👤 **ТГ:** {username}\n"
+        f"🏁 **Тип:** {data['race_type']}\n"
+        f"🆔 **ID в игре:** `{data['game_id']}`\n"
+        f"🚗 **Машина:** {message.text}\n"
+        f"━━━━━━━━━━━━━━━━━━━━━━\n"
+        f"👉 *Срочно добавь его в друзья!*"
+    )
     for admin_id in ADMIN_IDS:
         try: await bot.send_message(admin_id, admin_text, parse_mode="Markdown")
         except Exception: pass
+        
     await state.clear()
-    await message.answer("✅ **Заявка принята!** Ожидай.", reply_markup=main_menu(False))
+    await message.answer("✅ **Заявка принята!** Ожидай, админ добавит тебя в друзья.", reply_markup=main_menu(False))
