@@ -1,0 +1,12 @@
+services:
+  - type: cron
+    name: telegram-cron-bot
+    env: python
+    schedule: "0 12 * * *"   # каждый день в 12:00 UTC
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
