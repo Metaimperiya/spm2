@@ -4,10 +4,15 @@ from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart
 from aiogram.types import Message, CallbackQuery
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from fastapi import FastAPI
+import uvicorn
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
+
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+app = FastAPI()
 
 def main_menu():
     kb = InlineKeyboardBuilder()
@@ -40,13 +45,28 @@ async def back_main(call: CallbackQuery):
     await call.message.edit_text("Главное меню:", reply_markup=main_menu())
     await call.answer()
 
-# Заглушки для классов, чтобы не было ошибок
 @dp.callback_query(F.data.in_({"class_a", "class_b", "class_c"}))
 async def classes(call: CallbackQuery):
     await call.answer("Скоро тут будет инфа", show_alert=True)
 
-async def main():
-    await dp.start_polling(bot)
+@app.on_event("startup")
+async def on_startup():
+    if WEBHOOK_URL:
+        webhook_path = f"{WEBHOOK_URL}/webhook"
+        await bot.set_webhook(webhook_path)
+        print(f"Webhook установлен на {webhook_path}")
+
+@app.post("/webhook")
+async def webhook(update: dict):
+    from aiogram.types import Update
+    telegram_update = Update(**update)
+    await dp.feed_update(bot, telegram_update)
+    return {"ok": True}
+
+@app.get("/")
+async def index():
+    return {"status": "bot is running"}
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run("bot:app", host="0.0.0.0", port=port)
