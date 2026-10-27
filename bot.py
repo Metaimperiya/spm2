@@ -6,8 +6,10 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import Update
 from contextlib import asynccontextmanager
 
+# Импортируем базу данных
 from database import init_db
-from handlers import user_handlers, admin_handlers
+# Импортируем все роутеры (обработчики)
+from handlers import user_handlers, admin_handlers, member_handlers
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
@@ -15,17 +17,21 @@ WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# Подключаем роутеры
+# Подключаем роутеры (все обработчики)
 dp.include_router(user_handlers.router)
 dp.include_router(admin_handlers.router)
+dp.include_router(member_handlers.router)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db() # Инициализация базы данных при старте
+    # Инициализация базы данных при старте
+    init_db()
+    
     if WEBHOOK_URL:
         await bot.delete_webhook(drop_pending_updates=True)
         webhook_path = f"{WEBHOOK_URL}/webhook"
-        await bot.set_webhook(webhook_path)
+        # ВАЖНО: allowed_updates добавляет отслеживание входа в группы (chat_member)
+        await bot.set_webhook(webhook_path, allowed_updates=["message", "callback_query", "chat_member"])
         print(f"Webhook установлен на {webhook_path}")
     yield
     await bot.session.close()
