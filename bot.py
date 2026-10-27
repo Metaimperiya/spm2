@@ -52,6 +52,8 @@ async def classes(call: CallbackQuery):
 @app.on_event("startup")
 async def on_startup():
     if WEBHOOK_URL:
+        # Принудительно чистим старые зависшие вебхуки и ставим свежий
+        await bot.delete_webhook(drop_pending_updates=True)
         webhook_path = f"{WEBHOOK_URL}/webhook"
         await bot.set_webhook(webhook_path)
         print(f"Webhook установлен на {webhook_path}")
