@@ -5,11 +5,16 @@ ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
 
 def bottom_menu():
-    return ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="🏠 В главное меню")]], resize_keyboard=True, is_persistent=True)
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📢 Подать объявление")],
+            [KeyboardButton(text="🏠 В главное меню")]
+        ],
+        resize_keyboard=True, is_persistent=True
+    )
 
 def main_menu(is_admin=False):
     kb = InlineKeyboardBuilder()
-    kb.button(text="📢 Подать объявление", callback_data="create_ad")
     kb.button(text="🚗 Автомобили", callback_data="menu_cars")
     kb.button(text="👤 Аккаунты", callback_data="menu_accs")
     kb.button(text="💵 Монеты / Услуги", callback_data="menu_money")
@@ -17,16 +22,16 @@ def main_menu(is_admin=False):
     kb.button(text="💬 Сообщество", callback_data="menu_community")
     if is_admin:
         kb.button(text="👑 Админ-панель", callback_data="admin_panel")
-        kb.adjust(1, 2, 2, 1, 1, 1)
+        kb.adjust(2, 2, 1, 1)
     else:
-        kb.adjust(1, 2, 2, 1, 1)
+        kb.adjust(2, 2, 1)
     return kb.as_markup()
 
 def cars_menu():
     kb = InlineKeyboardBuilder()
     kb.button(text="💰 Продать машину", callback_data="car_sell")
     kb.button(text="🔄 Обменять машину", callback_data="car_trade")
-    kb.button(text="🛒 Купить (Связь с админом)", url=f"https://t.me/{ADMIN_USERNAME}")
+    kb.button(text="🛒 Купить машину", callback_data="buy_car_catalog") # Теперь каталог
     kb.button(text="⬅️ Назад", callback_data="back_main")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
@@ -34,7 +39,7 @@ def cars_menu():
 def accs_menu():
     kb = InlineKeyboardBuilder()
     kb.button(text="💰 Продать аккаунт", callback_data="acc_sell")
-    kb.button(text="🛒 Купить (Связь с админом)", url=f"https://t.me/{ADMIN_USERNAME}")
+    kb.button(text="🛒 Купить аккаунт", callback_data="buy_acc_catalog") # Теперь каталог
     kb.button(text="⬅️ Назад", callback_data="back_main")
     kb.adjust(1, 1, 1)
     return kb.as_markup()
@@ -67,4 +72,11 @@ def universal_post_keyboard():
     kb.button(text="💬 Написать админу", url=f"https://t.me/{ADMIN_USERNAME}")
     kb.button(text="🛡️ Клан", url="https://t.me/cpm_2_clan")
     kb.adjust(1, 2)
+    return kb.as_markup()
+
+def admin_approve_kb(ad_id):
+    kb = InlineKeyboardBuilder()
+    kb.button(text="✅ Одобрить", callback_data=f"approve_{ad_id}")
+    kb.button(text="❌ Отклонить", callback_data=f"reject_{ad_id}")
+    kb.adjust(2)
     return kb.as_markup()
