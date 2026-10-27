@@ -1,12 +1,12 @@
 from aiogram import Router, Bot
 from aiogram.types import ChatMemberUpdated
 from aiogram.filters import ChatMemberUpdatedFilter, IS_NOT_MEMBER, IS_MEMBER
-from bot import ADMIN_IDS
 
 router = Router()
 
 @router.chat_member(ChatMemberUpdatedFilter(IS_NOT_MEMBER >> IS_MEMBER))
 async def on_user_join(event: ChatMemberUpdated, bot: Bot):
+    from bot import ADMIN_IDS
     if event.chat.type in ["group", "supergroup"]:
         user = event.new_chat_member.user
         username = f"@{user.username}" if user.username else "скрыт"
