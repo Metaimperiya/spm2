@@ -5,15 +5,17 @@ from fastapi import FastAPI
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
 from contextlib import asynccontextmanager
-from database import init_db
+
+# Импортируем из нашей папки handlers
 from handlers import user_handlers, admin_handlers, member_handlers
+from database import init_db
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
-# Настройки (импортируются в другие файлы)
+# ТВОИ ДАННЫЕ (Эти переменные импортируются в другие файлы)
 ADMIN_USERNAME = "metaimperiya"
-ADMIN_IDS = [123456789, 987654321]  # <-- ЗАМЕНИ НА СВОИ ID
+ADMIN_IDS = [123456789, 987654321] # <-- ВПИШИ СВОИ ID!
 MAIN_CLAN_CHANNEL = "@cpm_2_clan"
 SALE_CHANNEL = "@cpm_2_sale"
 TRADE_CHANNEL = "@cpm_2_trade"
@@ -21,6 +23,7 @@ SELL_ACC_CHANNEL = "@Sell_CPM_2_accounts"
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
 dp.include_router(user_handlers.router)
 dp.include_router(admin_handlers.router)
 dp.include_router(member_handlers.router)
@@ -32,6 +35,7 @@ async def lifespan(app: FastAPI):
         await bot.delete_webhook(drop_pending_updates=True)
         webhook_path = f"{WEBHOOK_URL}/webhook"
         await bot.set_webhook(webhook_path, allowed_updates=["message", "callback_query", "chat_member"])
+        print("Webhook установлен")
     yield
     await bot.session.close()
 
