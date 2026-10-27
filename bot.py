@@ -14,41 +14,60 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 app = FastAPI()
 
+# --- КРАСИВОЕ ГЕЙМЕРСКОЕ ГЛАВНОЕ МЕНЮ ---
 def main_menu():
     kb = InlineKeyboardBuilder()
-    kb.button(text="🚗 Класс A", callback_data="class_a")
-    kb.button(text="🚙 Класс B", callback_data="class_b")
-    kb.button(text="🏎️ Класс C", callback_data="class_c")
-    kb.button(text="🌐 Наш сайт", url="https://www.metaimperiya.com/")
-    kb.button(text="💬 Наши группы", callback_data="groups")
-    kb.adjust(3, 1, 1)
+    # Заголовок / брендинг вшиваем прямо в логику или текст, а тут кнопки по классам
+    kb.button(text="🏎️ Класс A (Топ тачки)", callback_data="class_a")
+    kb.button(text="🚙 Класс B (Спорт)", callback_data="class_b")
+    kb.button(text="🚗 Класс C (База)", callback_data="class_c")
+    kb.button(text="🌐 Наш сайт (METAIMPERIYA)", url="https://www.metaimperiya.com/")
+    kb.button(text="💬 Комьюнити и Группы", callback_data="groups_menu")
+    kb.adjust(1, 2, 1, 1)
     return kb.as_markup()
 
-@dp.message(CommandStart())
-async def start(message: Message):
-    await message.answer(f"Привет, {message.from_user.first_name}!\n\nВыбирай раздел:", reply_markup=main_menu())
-
-@dp.callback_query(F.data == "groups")
-async def groups(call: CallbackQuery):
+# --- МЕНЮ ГРУПП ---
+def groups_menu():
     kb = InlineKeyboardBuilder()
     kb.button(text="🚗 Тачки CPM 2", url="https://t.me/tachki_cpm_2")
     kb.button(text="📈 CPM 2 Trade", url="https://t.me/cpm_2_trade")
     kb.button(text="💰 CPM 2 Sale", url="https://t.me/cpm_2_sale")
     kb.button(text="💵 CPM 2 Money", url="https://t.me/cpm_2_money")
-    kb.button(text="⬅️ Назад", callback_data="back_main")
+    kb.button(text="⬅️ Назад в меню", callback_data="back_main")
     kb.adjust(2, 2, 1)
-    await call.message.edit_text("Наши группы:", reply_markup=kb.as_markup())
+    return kb.as_markup()
+
+@dp.message(CommandStart())
+async def start(message: Message):
+    text = (
+        "🔥 **METAIMPERIYA | CPM 2 HUB** 🔥\n\n"
+        f"Здарова, **{message.from_user.first_name}**! Добро пожаловать в официальный бот по **Car Parking Multiplayer 2**.\n\n"
+        "⚡ Здесь ты найдешь лучшие тачки, актуальные курсы обмена, торговлю и мощное комьюнити.\n"
+        "Выбирай нужный раздел в меню ниже:"
+    )
+    await message.answer(text, reply_markup=main_menu(), parse_mode="Markdown")
+
+@dp.callback_query(F.data == "groups_menu")
+async def show_groups(call: CallbackQuery):
+    text = "💬 **Наши официальные ресурсы и группы CPM 2:**\nВыбирай, куда хочешь залететь:"
+    await call.message.edit_text(text, reply_markup=groups_menu(), parse_mode="Markdown")
     await call.answer()
 
 @dp.callback_query(F.data == "back_main")
 async def back_main(call: CallbackQuery):
-    await call.message.edit_text("Главное меню:", reply_markup=main_menu())
+    text = (
+        "🔥 **METAIMPERIYA | CPM 2 HUB** 🔥\n\n"
+        "Главное меню:"
+    )
+    await call.message.edit_text(text, reply_markup=main_menu(), parse_mode="Markdown")
     await call.answer()
 
 @dp.callback_query(F.data.in_({"class_a", "class_b", "class_c"}))
-async def classes(call: CallbackQuery):
-    await call.answer("Скоро тут будет инфа", show_alert=True)
+async def classes_info(call: CallbackQuery):
+    class_name = call.data.upper().replace("_", " ")
+    await call.answer(f"Раздел '{class_name}' заправляется и скоро взлетит! Ожидай обновление.", show_alert=True)
 
+# --- ВЕБХУКИ И СЕРВЕР ---
 @app.on_event("startup")
 async def on_startup():
     if WEBHOOK_URL:
