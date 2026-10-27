@@ -19,10 +19,8 @@ TRADE_CHANNEL = "@cpm_2_trade"
 MONEY_CHANNEL = "@cpm_2_money"
 SITE_URL = "https://www.metaimperiya.com/"
 
-# --- АДМИНЫ (СЮДА ПРИЛЕТАЮТ ЗАЯВКИ) ---
-# ВАЖНО: Замени эти цифры на свои реальные Telegram ID!
-# Узнать свой ID можно у бота @userinfobot
-ADMIN_IDS = [123456789, 987654321] # Замени на ID @citymain и @metaimperiya
+# --- ВАЖНО: ЗАМЕНИ ЭТИ ЦИФРЫ НА СВОИ РЕАЛЬНЫЕ ID (узнать у @userinfobot) ---
+ADMIN_IDS = [123456789, 987654321] 
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
@@ -42,6 +40,10 @@ class RaceForm(StatesGroup):
     race_type = State()
     game_id = State()
     car = State()
+
+# --- ФУНКЦИЯ ПРОВЕРКИ АДМИНА (ИСПРАВЛЕНА) ---
+def check_is_admin(user) -> bool:
+    return user.id in ADMIN_IDS
 
 # --- НИЖНЯЯ КЛАВИАТУРА ---
 def bottom_menu():
@@ -101,11 +103,6 @@ def universal_post_keyboard():
     kb.button(text="💵 Заработок", url="https://t.me/cpm_2_money")
     kb.adjust(2, 2, 2)
     return kb.as_markup()
-
-def check_is_admin(user) -> bool:
-    if not user.username:
-        return False
-    return user.username.lower() in ADMINS
 
 # --- СТАРТ ---
 @dp.message(CommandStart())
@@ -176,7 +173,6 @@ async def process_race_car(message: Message, state: FSMContext):
     car = message.text
     username = f"@{message.from_user.username}" if message.from_user.username else message.from_user.first_name
     
-    # Текст заявки для админов
     admin_text = (
         "🚨 **НОВАЯ ЗАЯВКА НА ГОНКУ!** 🚨\n"
         "━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -188,7 +184,6 @@ async def process_race_car(message: Message, state: FSMContext):
         "👉 *Срочно добавь его в друзья в игре!*"
     )
     
-    # Отправляем заявку всем админам
     for admin_id in ADMIN_IDS:
         try:
             await bot.send_message(chat_id=admin_id, text=admin_text, parse_mode="Markdown")
@@ -203,7 +198,7 @@ async def process_race_car(message: Message, state: FSMContext):
         parse_mode="Markdown"
     )
 
-# --- ОСТАЛЬНОЙ КОД (БАРАХОЛКА И Т.Д.) ---
+# --- ОСТАЛЬНОЙ КОД ---
 @dp.callback_query(F.data.in_({"class_a", "class_b", "class_c"}))
 async def classes_info(call: CallbackQuery):
     if call.data == "class_a":
