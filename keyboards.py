@@ -4,7 +4,22 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
 
-# НИЖНЯЯ КЛАВИАТУРА (КНОПКА ВОЗВРАЩЕНА)
+# ССЫЛКИ НА ТВОИ ГРУППЫ (ДЛЯ АВТО-КНОПОК)
+AUTO_BUTTONS = [
+    ("💰 Продажа", "https://t.me/cpm_2_sale"),
+    ("🔄 Обмен", "https://t.me/cpm_2_trade"),
+    ("👤 Аккаунты", "https://t.me/Sell_CPM_2_accounts"),
+    ("🛡️ Клан", "https://t.me/cpm_2_clan"),
+    ("🇷🇺 Россия", "https://t.me/cpm_2_russia"),
+    ("🇬🇧 English", "https://t.me/CPM_2_English"),
+    ("🇺🇸 USA", "https://t.me/CPM2USA"),
+    ("📱 Mobile", "https://t.me/CPM2_Mobile"),
+    ("🇹🇷 Turkey", "https://t.me/CPM2Turkey"),
+    ("🇺🇦 Ukraine", "https://t.me/CPM2Ukraine"),
+    ("📈 Trading", "https://t.me/CPM2Trading"),
+    ("🌐 Наш сайт", SITE_URL)
+]
+
 def bottom_menu():
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -62,12 +77,19 @@ def community_menu():
     kb.button(text="💰 Продажа авто", url="https://t.me/cpm_2_sale")
     kb.button(text="👤 Продажа акков", url="https://t.me/Sell_CPM_2_accounts")
     kb.button(text="🤝 Покупка акков", url="https://t.me/BuyCPM2accounts")
+    kb.button(text="🇷🇺 Россия", url="https://t.me/cpm_2_russia")
+    kb.button(text="🇬🇧 English", url="https://t.me/CPM_2_English")
+    kb.button(text="🇺🇸 USA", url="https://t.me/CPM2USA")
+    kb.button(text="📱 Mobile", url="https://t.me/CPM2_Mobile")
+    kb.button(text="🇹🇷 Turkey", url="https://t.me/CPM2Turkey")
+    kb.button(text="🇺🇦 Ukraine", url="https://t.me/CPM2Ukraine")
+    kb.button(text="📈 Trading", url="https://t.me/CPM2Trading")
     kb.button(text="🌐 Наш сайт", url=SITE_URL)
     kb.button(text="⬅️ Назад", callback_data="back_main")
-    kb.adjust(2, 2, 2, 1, 1)
+    kb.adjust(2, 2, 2, 2, 2, 2, 2, 1) # Красивая сетка по 2
     return kb.as_markup()
 
-# Кнопки для поста (когда юзер или админ их добавляет)
+# УНИВЕРСАЛЬНЫЙ ГЕНЕРАТОР КНОПОК ДЛЯ ПОСТА (СЕТКА 2x2)
 def custom_post_kb(buttons_list):
     kb = InlineKeyboardBuilder()
     for btn in buttons_list:
@@ -76,7 +98,7 @@ def custom_post_kb(buttons_list):
             kb.button(text=name.strip(), url=url.strip())
         except:
             pass
-    kb.adjust(1)
+    kb.adjust(2) # ВОТ ЗДЕСЬ ДЕЛАЕМ ПО 2 В РЯД
     return kb.as_markup()
 
 def admin_approve_kb(ad_id):
@@ -84,4 +106,11 @@ def admin_approve_kb(ad_id):
     kb.button(text="✅ Одобрить", callback_data=f"approve_{ad_id}")
     kb.button(text="❌ Отклонить", callback_data=f"reject_{ad_id}")
     kb.adjust(2)
+    return kb.as_markup()
+
+def admin_panel_kb():
+    kb = InlineKeyboardBuilder()
+    kb.button(text="📢 Создать рекламный пост", callback_data="admin_post_simple")
+    kb.button(text="⬅️ Назад", callback_data="back_main")
+    kb.adjust(1, 1)
     return kb.as_markup()
