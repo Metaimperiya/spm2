@@ -4,7 +4,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
 
-# ССЫЛКИ НА ТВОИ ГРУППЫ (ДЛЯ АВТО-КНОПОК)
+# СПИСОК ТВОИХ ГРУПП ДЛЯ АВТО-КНОПОК
 AUTO_BUTTONS = [
     ("💰 Продажа", "https://t.me/cpm_2_sale"),
     ("🔄 Обмен", "https://t.me/cpm_2_trade"),
@@ -71,25 +71,12 @@ def money_menu():
 
 def community_menu():
     kb = InlineKeyboardBuilder()
-    kb.button(text="🛡️ Клан", url="https://t.me/cpm_2_clan")
-    kb.button(text="🚗 Тачки", url="https://t.me/tachki_cpm_2")
-    kb.button(text="📈 Трейд", url="https://t.me/cpm_2_trade")
-    kb.button(text="💰 Продажа авто", url="https://t.me/cpm_2_sale")
-    kb.button(text="👤 Продажа акков", url="https://t.me/Sell_CPM_2_accounts")
-    kb.button(text="🤝 Покупка акков", url="https://t.me/BuyCPM2accounts")
-    kb.button(text="🇷🇺 Россия", url="https://t.me/cpm_2_russia")
-    kb.button(text="🇬🇧 English", url="https://t.me/CPM_2_English")
-    kb.button(text="🇺🇸 USA", url="https://t.me/CPM2USA")
-    kb.button(text="📱 Mobile", url="https://t.me/CPM2_Mobile")
-    kb.button(text="🇹🇷 Turkey", url="https://t.me/CPM2Turkey")
-    kb.button(text="🇺🇦 Ukraine", url="https://t.me/CPM2Ukraine")
-    kb.button(text="📈 Trading", url="https://t.me/CPM2Trading")
-    kb.button(text="🌐 Наш сайт", url=SITE_URL)
+    for name, url in AUTO_BUTTONS:
+        kb.button(text=name, url=url)
     kb.button(text="⬅️ Назад", callback_data="back_main")
-    kb.adjust(2, 2, 2, 2, 2, 2, 2, 1) # Красивая сетка по 2
+    kb.adjust(2, 2, 2, 2, 2, 2, 1) # Сетка по 2 кнопки в ряд
     return kb.as_markup()
 
-# УНИВЕРСАЛЬНЫЙ ГЕНЕРАТОР КНОПОК ДЛЯ ПОСТА (СЕТКА 2x2)
 def custom_post_kb(buttons_list):
     kb = InlineKeyboardBuilder()
     for btn in buttons_list:
@@ -98,7 +85,7 @@ def custom_post_kb(buttons_list):
             kb.button(text=name.strip(), url=url.strip())
         except:
             pass
-    kb.adjust(2) # ВОТ ЗДЕСЬ ДЕЛАЕМ ПО 2 В РЯД
+    kb.adjust(2) # Сетка по 2 в ряд для постов
     return kb.as_markup()
 
 def admin_approve_kb(ad_id):
