@@ -14,7 +14,6 @@ def is_admin_check(user):
     if user.username and user.username.lower() in ADMIN_USERNAMES: return True
     return False
 
-# --- МОДЕРАЦИЯ ---
 @router.callback_query(F.data.startswith("approve_"))
 async def approve_ad_callback(call: CallbackQuery, bot: Bot):
     from bot import ADMIN_IDS, MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL
@@ -52,7 +51,6 @@ async def reject_ad_callback(call: CallbackQuery):
     await call.message.edit_caption(caption=f"❌ **Объявление #{ad_id} ОТКЛОНЕНО.**")
     await call.answer("Отклонено")
 
-# --- АДМИН ПАНЕЛЬ ---
 @router.callback_query(F.data == "admin_panel")
 async def admin_panel(call: CallbackQuery):
     if not is_admin_check(call.from_user):
@@ -61,7 +59,6 @@ async def admin_panel(call: CallbackQuery):
     await call.message.edit_text("👑 **Админ-панель:**", reply_markup=admin_panel_kb())
     await call.answer()
 
-# --- ПРОСТО ОБЪЯВЛЕНИЕ (С КНОПКАМИ) ---
 @router.callback_query(F.data == "admin_post_simple")
 async def admin_simple_post_start(call: CallbackQuery, state: FSMContext):
     if not is_admin_check(call.from_user): return
@@ -104,7 +101,6 @@ async def admin_simple_get_text(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "auto_buttons")
 async def admin_auto_buttons(call: CallbackQuery, state: FSMContext):
-    # Автоматически подставляем ВСЕ твои группы
     buttons = [f"{name} | {url}" for name, url in AUTO_BUTTONS]
     await state.update_data(buttons=buttons)
     await call.message.edit_text(
