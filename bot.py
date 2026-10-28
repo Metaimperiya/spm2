@@ -14,7 +14,9 @@ WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
 # --- ГЛАВНЫЕ НАСТРОЙКИ ---
 ADMIN_USERNAME = "metaimperiya"
-ADMIN_IDS = [123456789, 987654321] # <-- ВПИШИ СВОИ ID (узнать у @userinfobot)
+ADMIN_IDS = [123456789, 987654321]  # <--- ВПИШИ СВОИ ЦИФРОВЫЕ ID
+ADMIN_USERNAMES = ["metaimperiya", "citymain"] # <--- ТВОИ ЮЗЕРНЕЙМЫ (без @)
+
 MAIN_CLAN_CHANNEL = "@cpm_2_clan"
 SALE_CHANNEL = "@cpm_2_sale"
 TRADE_CHANNEL = "@cpm_2_trade"
