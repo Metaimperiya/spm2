@@ -5,7 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from states import AdForm, RaceForm
 from keyboards import main_menu, bottom_menu, cars_menu, accs_menu, money_menu, community_menu
-from database import add_ad_to_db, get_approved_ads
+from database import add_ad_to_db, get_approved_ads, add_user_to_db
 
 router = Router()
 
@@ -18,6 +18,9 @@ def is_admin_check(user):
 @router.message(F.text == "/start")
 async def start(message: Message, state: FSMContext):
     await state.clear()
+    username = f"@{message.from_user.username}" if message.from_user.username else "скрыт"
+    add_user_to_db(message.from_user.id, username, message.from_user.first_name)
+    
     is_admin = is_admin_check(message.from_user)
     text = f"🏁 **METAIMPERIYA | CPM 2 HUB** 🏁\n━━━━━━━━━━━━━━━━━━━━━━\n\nЗдарова, **{message.from_user.first_name}**!\n\n👇 *Жми кнопку внизу или выбирай раздел:*"
     await message.answer(text, reply_markup=bottom_menu(), parse_mode="Markdown")
