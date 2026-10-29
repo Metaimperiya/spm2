@@ -9,3 +9,6 @@ class RaceForm(StatesGroup):
 
 class AdminAdForm(StatesGroup):
     media = State(); text = State(); buttons = State()
+
+class AdminBroadcast(StatesGroup):
+    message = State()
