@@ -7,32 +7,16 @@ def init_db():
     os.makedirs("data", exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
-    # Таблица объявлений
     cursor.execute('''CREATE TABLE IF NOT EXISTS ads (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, 
-        user_id INTEGER, 
-        username TEXT,
-        category TEXT, 
-        ad_type TEXT,
-        title TEXT, 
-        description TEXT, 
-        price TEXT, 
-        game_id TEXT, 
-        contact TEXT, 
-        photo_id TEXT,
-        status TEXT DEFAULT 'pending', 
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT,
+        category TEXT, ad_type TEXT, title TEXT, description TEXT, price TEXT, 
+        game_id TEXT, contact TEXT, photo_id TEXT, status TEXT DEFAULT 'pending', 
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
-    
-    # Таблица пользователей (для рассылки)
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
-        user_id INTEGER PRIMARY KEY,
-        username TEXT,
-        first_name TEXT,
-        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, 
+        lang TEXT DEFAULT 'ru', joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
-    
     conn.commit()
     conn.close()
 
@@ -70,10 +54,25 @@ def get_approved_ads(category, ad_type):
     conn.close()
     return rows
 
-def add_user_to_db(user_id, username, first_name):
+def add_user_to_db(user_id, username, first_name, lang="ru"):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('INSERT OR IGNORE INTO users (user_id, username, first_name) VALUES (?, ?, ?)', (user_id, username, first_name))
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, username, first_name, lang) VALUES (?, ?, ?, ?)', (user_id, username, first_name, lang))
+    conn.commit()
+    conn.close()
+
+def get_user_lang(user_id):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT lang FROM users WHERE user_id = ?', (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else "ru"
+
+def update_user_lang(user_id, lang):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET lang = ? WHERE user_id = ?', (lang, user_id))
     conn.commit()
     conn.close()
 
