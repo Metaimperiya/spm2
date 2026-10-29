@@ -16,7 +16,7 @@ AUTO_BUTTONS = [
     ("📱 Mobile", "https://t.me/CPM2_Mobile"),
     ("🇹🇷 Turkey", "https://t.me/CPM2Turkey"),
     ("🇺🇦 Ukraine", "https://t.me/CPM2Ukraine"),
-    ("📈 Trading", "https://t.me/CPM2Trading"),
+    ("📈 Trading", "https://t.me/CPM2Trader"), # ОБНОВЛЕННАЯ ССЫЛКА
     ("🌐 Наш сайт", SITE_URL)
 ]
 
