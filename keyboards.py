@@ -4,7 +4,6 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
 
-# СПИСОК ТВОИХ ГРУПП ДЛЯ АВТО-КНОПОК
 AUTO_BUTTONS = [
     ("💰 Продажа", "https://t.me/cpm_2_sale"),
     ("🔄 Обмен", "https://t.me/cpm_2_trade"),
@@ -16,7 +15,7 @@ AUTO_BUTTONS = [
     ("📱 Mobile", "https://t.me/CPM2_Mobile"),
     ("🇹🇷 Turkey", "https://t.me/CPM2Turkey"),
     ("🇺🇦 Ukraine", "https://t.me/CPM2Ukraine"),
-    ("📈 Trading", "https://t.me/CPM2Trader"), # ОБНОВЛЕННАЯ ССЫЛКА
+    ("📈 Trading", "https://t.me/CPM2Trader"),
     ("🌐 Наш сайт", SITE_URL)
 ]
 
@@ -74,7 +73,7 @@ def community_menu():
     for name, url in AUTO_BUTTONS:
         kb.button(text=name, url=url)
     kb.button(text="⬅️ Назад", callback_data="back_main")
-    kb.adjust(2, 2, 2, 2, 2, 2, 1) # Сетка по 2 кнопки в ряд
+    kb.adjust(2, 2, 2, 2, 2, 2, 1)
     return kb.as_markup()
 
 def custom_post_kb(buttons_list):
@@ -85,7 +84,7 @@ def custom_post_kb(buttons_list):
             kb.button(text=name.strip(), url=url.strip())
         except:
             pass
-    kb.adjust(2) # Сетка по 2 в ряд для постов
+    kb.adjust(2)
     return kb.as_markup()
 
 def admin_approve_kb(ad_id):
@@ -98,6 +97,7 @@ def admin_approve_kb(ad_id):
 def admin_panel_kb():
     kb = InlineKeyboardBuilder()
     kb.button(text="📢 Создать рекламный пост", callback_data="admin_post_simple")
+    kb.button(text="📨 Сделать рассылку", callback_data="admin_broadcast")
     kb.button(text="⬅️ Назад", callback_data="back_main")
-    kb.adjust(1, 1)
+    kb.adjust(1, 1, 1)
     return kb.as_markup()
