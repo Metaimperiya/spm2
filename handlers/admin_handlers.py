@@ -2,9 +2,9 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from states import AdminAdForm
+from states import AdminAdForm, AdminBroadcast
 from keyboards import main_menu, admin_panel_kb, custom_post_kb, AUTO_BUTTONS
-from database import approve_ad, get_ad_by_id
+from database import approve_ad, get_ad_by_id, get_all_users
 
 router = Router()
 
@@ -59,6 +59,48 @@ async def admin_panel(call: CallbackQuery):
     await call.message.edit_text("👑 **Админ-панель:**", reply_markup=admin_panel_kb())
     await call.answer()
 
+# --- РАССЫЛКА ---
+@router.callback_query(F.data == "admin_broadcast")
+async def admin_broadcast_start(call: CallbackQuery, state: FSMContext):
+    if not is_admin_check(call.from_user): return
+    await state.set_state(AdminBroadcast.message)
+    await call.message.edit_text(
+        "📢 **Рассылка по всем пользователям**\n\n"
+        "Отправь сообщение (текст, фото или видео), которое улетит всем, кто нажимал /start в боте.\n\n"
+        "Для отмены напиши /cancel",
+        parse_mode="Markdown"
+    )
+    await call.answer()
+
+@router.message(AdminBroadcast.message, F.text == "/cancel")
+async def admin_broadcast_cancel(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("❌ Рассылка отменена.", reply_markup=main_menu(True))
+
+@router.message(AdminBroadcast.message)
+async def admin_broadcast_send(message: Message, state: FSMContext, bot: Bot):
+    users = get_all_users()
+    await state.clear()
+    
+    await message.answer(f"⏳ **Начинаю рассылку для {len(users)} пользователей...**")
+    
+    success = 0
+    fail = 0
+    for user_id in users:
+        try:
+            await message.send_copy(chat_id=user_id)
+            success += 1
+        except Exception:
+            fail += 1
+    
+    await message.answer(
+        f"✅ **Рассылка завершена!**\n\n"
+        f"Доставлено: {success}\n"
+        f"Заблокировали бота: {fail}",
+        reply_markup=main_menu(True)
+    )
+
+# --- СОЗДАНИЕ ПОСТА ---
 @router.callback_query(F.data == "admin_post_simple")
 async def admin_simple_post_start(call: CallbackQuery, state: FSMContext):
     if not is_admin_check(call.from_user): return
