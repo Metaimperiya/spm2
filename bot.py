@@ -14,7 +14,7 @@ WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
 # --- ГЛАВНЫЕ НАСТРОЙКИ ---
 ADMIN_USERNAME = "metaimperiya"
-ADMIN_IDS = [123456789, 987654321]  # <--- ВПИШИ СВОИ ЦИФРОВЫЕ ID
+ADMIN_IDS = [123456789, 987654321]  # <--- ОБЯЗАТЕЛЬНО ВПИШИ СВОИ ЦИФРОВЫЕ ID
 ADMIN_USERNAMES = ["metaimperiya", "cpm2trader"]
 
 MAIN_CLAN_CHANNEL = "@cpm_2_clan"
@@ -47,6 +47,11 @@ async def webhook(update: dict):
     telegram_update = Update(**update)
     await dp.feed_update(bot, telegram_update)
     return {"ok": True}
+
+# --- ВОТ ТОТ САМЫЙ ОБРАБОТЧИК ДЛЯ CRON-JOB.ORG ---
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 @app.get("/")
 async def index():
