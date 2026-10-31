@@ -12,3 +12,8 @@ class AdminAdForm(StatesGroup):
 
 class AdminBroadcast(StatesGroup):
     message = State()
+
+# НОВОЕ СОСТОЯНИЕ ДЛЯ КНОПОК БЕЗ ТЕКСТА
+class AdminButtonsOnly(StatesGroup):
+    count = State()
+    buttons = State()
