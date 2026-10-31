@@ -4,7 +4,6 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
 
-# Основные группы (без подслушки)
 AUTO_BUTTONS = [
     ("💰 Продажа", "https://t.me/cpm_2_sale"),
     ("🔄 Обмен", "https://t.me/cpm_2_trade"),
@@ -70,37 +69,25 @@ def money_menu():
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
-# --- МЕНЮ СООБЩЕСТВА (С ПОДСЛУШКОЙ ОТДЕЛЬНО) ---
 def community_menu():
     kb = InlineKeyboardBuilder()
-    # Сначала отдельная кнопка Подслушки на всю ширину
     kb.button(text="👂 ПОДСЛУШКА CPM 2", url=PODSLUSHKA_URL) 
-    
-    # Потом все остальные группы по 2 в ряд
     for name, url in AUTO_BUTTONS:
         kb.button(text=name, url=url)
-        
     kb.button(text="⬅️ Назад", callback_data="back_main")
-    
-    # Настраиваем сетку: 1 кнопка сверху, потом по 2, в конце 1
     kb.adjust(1, 2, 2, 2, 2, 2, 2, 1)
     return kb.as_markup()
 
-# --- ГЕНЕРАТОР КНОПОК ДЛЯ ПОСТОВ ---
 def custom_post_kb(buttons_list):
     kb = InlineKeyboardBuilder()
-    
-    # Первую кнопку делаем Подслушкой (чтобы она всегда была сверху)
     kb.button(text="👂 ПОДСЛУШКА CPM 2", url=PODSLUSHKA_URL)
-    
     for btn in buttons_list:
         try:
             name, url = btn.split("|")
             kb.button(text=name.strip(), url=url.strip())
         except:
             pass
-            
-    kb.adjust(1, 2) # 1 кнопка сверху, остальные по 2 в ряд
+    kb.adjust(1, 2)
     return kb.as_markup()
 
 def admin_approve_kb(ad_id):
@@ -113,7 +100,8 @@ def admin_approve_kb(ad_id):
 def admin_panel_kb():
     kb = InlineKeyboardBuilder()
     kb.button(text="📢 Создать рекламный пост", callback_data="admin_post_simple")
+    kb.button(text="🔗 Отправить только кнопки", callback_data="admin_buttons_only")
     kb.button(text="📨 Сделать рассылку", callback_data="admin_broadcast")
     kb.button(text="⬅️ Назад", callback_data="back_main")
-    kb.adjust(1, 1, 1)
+    kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
