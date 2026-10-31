@@ -16,7 +16,7 @@ def is_admin_check(user):
 
 @router.callback_query(F.data.startswith("approve_"))
 async def approve_ad_callback(call: CallbackQuery, bot: Bot):
-    from bot import ADMIN_IDS, MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL
+    from bot import ADMIN_IDS, MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL, PODSLUSHKA_CHANNEL
     if call.from_user.id not in ADMIN_IDS: return
     
     ad_id = int(call.data.split("_")[1])
@@ -31,11 +31,12 @@ async def approve_ad_callback(call: CallbackQuery, bot: Bot):
     kb.button(text="💬 Написать админу", url="https://t.me/metaimperiya")
     kb.adjust(1, 1)
     
-    target = SALE_CHANNEL
-    if ad[4] == "car_trade": target = TRADE_CHANNEL
-    elif ad[3] == "acc": target = SELL_ACC_CHANNEL
+    channels = [MAIN_CLAN_CHANNEL, PODSLUSHKA_CHANNEL]
+    if ad[4] == "car_trade": channels.append(TRADE_CHANNEL)
+    elif ad[3] == "acc": channels.append(SELL_ACC_CHANNEL)
+    else: channels.append(SALE_CHANNEL)
     
-    for chat in {MAIN_CLAN_CHANNEL, target}:
+    for chat in set(channels):
         try:
             await bot.send_photo(chat, photo=ad[10], caption=post_text, reply_markup=kb.as_markup(), parse_mode="Markdown")
         except Exception as e: print(f"Ошибка: {e}")
@@ -141,12 +142,12 @@ async def admin_auto_buttons(call: CallbackQuery, state: FSMContext):
 @router.message(AdminAdForm.buttons, F.text == "/done")
 async def admin_simple_finish(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
-    from bot import MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL
+    from bot import MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL, PODSLUSHKA_CHANNEL
     buttons = data.get("buttons", [])
     if not buttons:
         buttons = ["🌐 Наш сайт | https://www.metaimperiya.com/", "💬 Написать админу | https://t.me/metaimperiya"]
     kb = custom_post_kb(buttons)
-    channels = [MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL]
+    channels = [MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL, PODSLUSHKA_CHANNEL]
     success = 0
     for chat in channels:
         try:
@@ -231,7 +232,7 @@ async def admin_buttons_collect(message: Message, state: FSMContext, bot: Bot):
         await state.update_data(buttons=buttons, current=current)
         await message.answer(f"Отправь кнопку №{current + 1} в формате `Название | ссылка`:", parse_mode="Markdown")
     else:
-        from bot import MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL
+        from bot import MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL, PODSLUSHKA_CHANNEL
         
         kb = InlineKeyboardBuilder()
         for btn in buttons:
@@ -241,14 +242,25 @@ async def admin_buttons_collect(message: Message, state: FSMContext, bot: Bot):
             except: pass
         kb.adjust(1)
         
-        channels = [MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL]
+        channels = [MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL, PODSLUSHKA_CHANNEL]
         success = 0
+        errors_text = ""
         
         for chat in channels:
             try:
-                await bot.send_message(chat, text="\u200b", reply_markup=kb.as_markup())
+                await bot.send_message(chat, text=".", reply_markup=kb.as_markup())
                 success += 1
-            except Exception as e: print(f"Ошибка: {e}")
+            except Exception as e: 
+                print(f"Ошибка отправки в {chat}: {e}")
+                errors_text += f"❌ {chat}: {e}\n"
                 
         await state.clear()
-        await message.answer(f"✅ **Кнопки отправлены в {success} каналов!**", reply_markup=main_menu(True))
+        
+        if errors_text:
+            await message.answer(
+                f"✅ **Кнопки отправлены в {success} каналов!**\n\n"
+                f"⚠️ **Ошибки при отправке:**\n{errors_text}",
+                reply_markup=main_menu(True)
+            )
+        else:
+            await message.answer(f"✅ **Кнопки отправлены во все {success} каналов!**", reply_markup=main_menu(True))
