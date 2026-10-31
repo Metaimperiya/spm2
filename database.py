@@ -7,40 +7,38 @@ def init_db():
     os.makedirs("data", exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
-    # Таблица объявлений
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS ads (
-        id INTEGER PRIMARY KEY AUTOINCREMENT, 
-        user_id INTEGER, 
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
         username TEXT,
-        category TEXT, 
+        category TEXT,
         ad_type TEXT,
-        title TEXT, 
-        description TEXT, 
-        price TEXT, 
-        game_id TEXT, 
-        contact TEXT, 
+        title TEXT,
+        description TEXT,
+        price TEXT,
+        game_id TEXT,
+        contact TEXT,
         photo_id TEXT,
-        status TEXT DEFAULT 'pending', 
+        status TEXT DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
-    
-    # Таблица пользователей (для рассылки)
+
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY,
         username TEXT,
         first_name TEXT,
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
-    
+
     conn.commit()
     conn.close()
 
 def add_ad_to_db(user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('''INSERT INTO ads (user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id) 
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+    cursor.execute('''INSERT INTO ads (user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                    (user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id))
     ad_id = cursor.lastrowid
     conn.commit()
