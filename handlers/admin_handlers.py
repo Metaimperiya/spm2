@@ -2,7 +2,7 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from states import AdminAdForm, AdminBroadcast
+from states import AdminAdForm, AdminBroadcast, AdminButtonsOnly
 from keyboards import main_menu, admin_panel_kb, custom_post_kb, AUTO_BUTTONS
 from database import approve_ad, get_ad_by_id, get_all_users
 
@@ -66,7 +66,7 @@ async def admin_broadcast_start(call: CallbackQuery, state: FSMContext):
     await state.set_state(AdminBroadcast.message)
     await call.message.edit_text(
         "📢 **Рассылка по всем пользователям**\n\n"
-        "Отправь сообщение (текст, фото или видео), которое улетит всем, кто нажимал /start в боте.\n\n"
+        "Отправь сообщение (текст, фото или видео), которое улетит всем.\n\n"
         "Для отмены напиши /cancel",
         parse_mode="Markdown"
     )
@@ -81,24 +81,14 @@ async def admin_broadcast_cancel(message: Message, state: FSMContext):
 async def admin_broadcast_send(message: Message, state: FSMContext, bot: Bot):
     users = get_all_users()
     await state.clear()
-    
     await message.answer(f"⏳ **Начинаю рассылку для {len(users)} пользователей...**")
-    
-    success = 0
-    fail = 0
+    success, fail = 0, 0
     for user_id in users:
         try:
             await message.send_copy(chat_id=user_id)
             success += 1
-        except Exception:
-            fail += 1
-    
-    await message.answer(
-        f"✅ **Рассылка завершена!**\n\n"
-        f"Доставлено: {success}\n"
-        f"Заблокировали бота: {fail}",
-        reply_markup=main_menu(True)
-    )
+        except Exception: fail += 1
+    await message.answer(f"✅ **Рассылка завершена!**\n\nДоставлено: {success}\nЗаблокировали бота: {fail}", reply_markup=main_menu(True))
 
 # --- СОЗДАНИЕ ПОСТА ---
 @router.callback_query(F.data == "admin_post_simple")
@@ -145,26 +135,19 @@ async def admin_simple_get_text(message: Message, state: FSMContext):
 async def admin_auto_buttons(call: CallbackQuery, state: FSMContext):
     buttons = [f"{name} | {url}" for name, url in AUTO_BUTTONS]
     await state.update_data(buttons=buttons)
-    await call.message.edit_text(
-        "✅ **Все кнопки добавлены автоматически!**\n\n"
-        "Теперь напиши /done, чтобы отправить пост во все каналы.",
-        parse_mode="Markdown"
-    )
+    await call.message.edit_text("✅ **Все кнопки добавлены автоматически!**\n\nНапиши /done.", parse_mode="Markdown")
     await call.answer()
 
 @router.message(AdminAdForm.buttons, F.text == "/done")
 async def admin_simple_finish(message: Message, state: FSMContext, bot: Bot):
     data = await state.get_data()
     from bot import MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL
-    
     buttons = data.get("buttons", [])
     if not buttons:
         buttons = ["🌐 Наш сайт | https://www.metaimperiya.com/", "💬 Написать админу | https://t.me/metaimperiya"]
-        
     kb = custom_post_kb(buttons)
     channels = [MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL]
     success = 0
-    
     for chat in channels:
         try:
             if data.get("media_type") == "photo":
@@ -175,7 +158,6 @@ async def admin_simple_finish(message: Message, state: FSMContext, bot: Bot):
                 await bot.send_message(chat, text=data["text"], reply_markup=kb, parse_mode="Markdown")
             success += 1
         except Exception as e: print(f"Ошибка: {e}")
-            
     await state.clear()
     await message.answer(f"✅ **Пост отправлен в {success} каналов!**", reply_markup=main_menu(True))
 
@@ -196,3 +178,77 @@ async def admin_sell_start(call: CallbackQuery, state: FSMContext):
     await state.set_state(AdminAdForm.media)
     await call.message.edit_text("👑 **Админская продажа**\n\nОтправь фото/видео:")
     await call.answer()
+
+
+# --- НОВАЯ ФУНКЦИЯ: ТОЛЬКО КНОПКИ ---
+@router.callback_query(F.data == "admin_buttons_only")
+async def admin_buttons_only_start(call: CallbackQuery, state: FSMContext):
+    if not is_admin_check(call.from_user): return
+    await state.set_state(AdminButtonsOnly.count)
+    await call.message.edit_text(
+        "🔗 **Отправка только кнопок**\n\n"
+        "Сколько кнопок ты хочешь отправить? (Напиши цифру, например: 1 или 2)\n\n"
+        "Для отмены напиши /cancel",
+        parse_mode="Markdown"
+    )
+    await call.answer()
+
+@router.message(AdminButtonsOnly.count, F.text == "/cancel")
+async def admin_buttons_cancel(message: Message, state: FSMContext):
+    await state.clear()
+    await message.answer("❌ Отменено.", reply_markup=main_menu(True))
+
+@router.message(AdminButtonsOnly.count, F.text)
+async def admin_buttons_get_count(message: Message, state: FSMContext):
+    if not message.text.isdigit():
+        await message.answer("⚠️ Напиши просто цифру (например, 1 или 2):")
+        return
+    
+    count = int(message.text)
+    if count < 1 or count > 10:
+        await message.answer("⚠️ Можно от 1 до 10 кнопок. Напиши еще раз:")
+        return
+        
+    await state.update_data(count=count, current=0, buttons=[])
+    await state.set_state(AdminButtonsOnly.buttons)
+    await message.answer(f"Отправь кнопку №1 в формате `Название | ссылка`:", parse_mode="Markdown")
+
+@router.message(AdminButtonsOnly.buttons, F.text)
+async def admin_buttons_collect(message: Message, state: FSMContext, bot: Bot):
+    data = await state.get_data()
+    buttons = data.get("buttons", [])
+    current = data.get("current", 0)
+    count = data.get("count", 1)
+    
+    if "|" not in message.text:
+        await message.answer("⚠️ Ошибка! Формат: `Название | ссылка`", parse_mode="Markdown")
+        return
+        
+    buttons.append(message.text)
+    current += 1
+    
+    if current < count:
+        await state.update_data(buttons=buttons, current=current)
+        await message.answer(f"Отправь кнопку №{current + 1} в формате `Название | ссылка`:", parse_mode="Markdown")
+    else:
+        from bot import MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL
+        
+        kb = InlineKeyboardBuilder()
+        for btn in buttons:
+            try:
+                name, url = btn.split("|")
+                kb.button(text=name.strip(), url=url.strip())
+            except: pass
+        kb.adjust(1)
+        
+        channels = [MAIN_CLAN_CHANNEL, SALE_CHANNEL, TRADE_CHANNEL, SELL_ACC_CHANNEL]
+        success = 0
+        
+        for chat in channels:
+            try:
+                await bot.send_message(chat, text="\u200b", reply_markup=kb.as_markup())
+                success += 1
+            except Exception as e: print(f"Ошибка: {e}")
+                
+        await state.clear()
+        await message.answer(f"✅ **Кнопки отправлены в {success} каналов!**", reply_markup=main_menu(True))
