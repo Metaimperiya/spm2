@@ -3,8 +3,8 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
-PODSLUSHKA_URL = "https://t.me/podslushkacpm2"
 
+# Основные группы (без Подслушки, она отдельно)
 AUTO_BUTTONS = [
     ("💰 Продажа", "https://t.me/cpm_2_sale"),
     ("🔄 Обмен", "https://t.me/cpm_2_trade"),
@@ -16,16 +16,18 @@ AUTO_BUTTONS = [
     ("🇹🇷 Turkey", "https://t.me/CPM2Turkey"),
     ("🇺🇦 Ukraine", "https://t.me/CPM2Ukraine"),
     ("📈 Trading", "https://t.me/CPM2Trader"),
-    ("🌐 Наш сайт", SITE_URL),
+    ("🌐 Наш сайт", SITE_URL)
 ]
+
+PODSLUSHKA_URL = "https://t.me/podslushkacpm2"
 
 def bottom_menu():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📢 Подать объявление")],
-            [KeyboardButton(text="🏠 В главное меню")],
+            [KeyboardButton(text="🏠 В главное меню")]
         ],
-        resize_keyboard=True, is_persistent=True,
+        resize_keyboard=True, is_persistent=True
     )
 
 def main_menu(is_admin=False):
@@ -68,15 +70,23 @@ def money_menu():
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
+# --- ВОТ ЗДЕСЬ ПОДСЛУШКА ОТДЕЛЬНО ---
 def community_menu():
     kb = InlineKeyboardBuilder()
-    kb.button(text="👂 ПОДСЛУШКА CPM 2", url=PODSLUSHKA_URL)
+    # Первая кнопка на всю ширину
+    kb.button(text="👂 ПОДСЛУШКА CPM 2", url=PODSLUSHKA_URL) 
+    
+    # Остальные группы по 2 в ряд
     for name, url in AUTO_BUTTONS:
         kb.button(text=name, url=url)
+        
     kb.button(text="⬅️ Назад", callback_data="back_main")
+    
+    # Сетка: 1 кнопка (Подслушка) сверху, потом по 2, в конце 1 (Назад)
     kb.adjust(1, 2, 2, 2, 2, 2, 2, 1)
     return kb.as_markup()
 
+# Генератор кнопок для постов (Подслушка всегда сверху)
 def custom_post_kb(buttons_list):
     kb = InlineKeyboardBuilder()
     kb.button(text="👂 ПОДСЛУШКА CPM 2", url=PODSLUSHKA_URL)
@@ -84,7 +94,7 @@ def custom_post_kb(buttons_list):
         try:
             name, url = btn.split("|")
             kb.button(text=name.strip(), url=url.strip())
-        except Exception:
+        except:
             pass
     kb.adjust(1, 2)
     return kb.as_markup()
