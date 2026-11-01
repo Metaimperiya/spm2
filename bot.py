@@ -1,3 +1,4 @@
+import asyncio
 import os
 import uvicorn
 from fastapi import FastAPI
@@ -13,11 +14,11 @@ WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
 # --- ГЛАВНЫЕ НАСТРОЙКИ ---
 ADMIN_USERNAME = "metaimperiya"
-# ТВОИ РЕАЛЬНЫЕ ID (оба аккаунта):
-ADMIN_IDS = [806159173, 5493746865]
+# ВПИШИ СВОИ ЦИФРОВЫЕ ID (если ты их уже вписал, оставь как есть)
+ADMIN_IDS = [123456789, 987654321] 
 ADMIN_USERNAMES = ["metaimperiya", "cpm2trader"]
 
-# КАНАЛЫ
+# --- КАНАЛЫ ---
 MAIN_CLAN_CHANNEL = "@cpm_2_clan"
 SALE_CHANNEL = "@cpm_2_sale"
 TRADE_CHANNEL = "@cpm_2_trade"
