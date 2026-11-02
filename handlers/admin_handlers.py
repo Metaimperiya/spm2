@@ -2,22 +2,30 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+import asyncio
 
 from states import AdminAdForm, AdminBroadcast, AdminButtonsOnly
 from keyboards import main_menu, admin_panel_kb, custom_post_kb, AUTO_BUTTONS
-from database import approve_ad, get_ad_by_id, get_all_users
+from database import approve_ad, get_ad_by_id
+from firebase_bridge import get_newsletter_subscribers
+from bot_config import (
+    ADMIN_IDS,
+    MAIN_CLAN_CHANNEL,
+    SALE_CHANNEL,
+    TRADE_CHANNEL,
+    SELL_ACC_CHANNEL,
+    PODSLUSHKA_CHANNEL,
+    is_admin,
+)
 
 router = Router()
 
 def is_admin_check(user):
-    from bot import is_admin
     return is_admin(user)
 
 # --- ОДОБРЕНИЕ / ОТКЛОНЕНИЕ ---
 @router.callback_query(F.data.startswith("approve_"))
 async def approve_ad_callback(call: CallbackQuery, bot: Bot):
-    from bot import (ADMIN_IDS, MAIN_CLAN_CHANNEL, SALE_CHANNEL,
-                     TRADE_CHANNEL, SELL_ACC_CHANNEL, PODSLUSHKA_CHANNEL)
     if call.from_user.id not in ADMIN_IDS:
         return
 
@@ -58,12 +66,38 @@ async def approve_ad_callback(call: CallbackQuery, bot: Bot):
         except Exception as e:
             print(f"Ошибка approve в {chat}: {e}")
 
-    await call.message.edit_caption(caption=f"✅ **Объявление #{ad_id} ОДОБРЕНО!**")
+    # Личные объявления получают только пользователи, явно включившие рассылку.
+    subscribers = await asyncio.to_thread(get_newsletter_subscribers)
+    delivered = 0
+    for user_id in subscribers:
+        try:
+            if len(ad) > 11 and ad[11] == "video":
+                await bot.send_video(
+                    user_id,
+                    video=ad[10],
+                    caption=post_text,
+                    reply_markup=kb.as_markup(),
+                    parse_mode="Markdown",
+                )
+            else:
+                await bot.send_photo(
+                    user_id,
+                    photo=ad[10],
+                    caption=post_text,
+                    reply_markup=kb.as_markup(),
+                    parse_mode="Markdown",
+                )
+            delivered += 1
+        except Exception as e:
+            print(f"Не удалось отправить объявление подписчику {user_id}: {e}")
+
+    await call.message.edit_caption(
+        caption=f"✅ **Объявление #{ad_id} ОДОБРЕНО!**\n📬 Личная рассылка: {delivered}/{len(subscribers)}"
+    )
     await call.answer("Одобрено!")
 
 @router.callback_query(F.data.startswith("reject_"))
 async def reject_ad_callback(call: CallbackQuery):
-    from bot import ADMIN_IDS
     if call.from_user.id not in ADMIN_IDS:
         return
     ad_id = int(call.data.split("_")[1])
@@ -86,8 +120,9 @@ async def admin_broadcast_start(call: CallbackQuery, state: FSMContext):
         return
     await state.set_state(AdminBroadcast.message)
     await call.message.edit_text(
-        "📢 **Рассылка по всем пользователям**\n\n"
-        "Отправь сообщение (текст, фото или видео).\n\n"
+        f"📢 **Рассылка подписчикам: {len(await asyncio.to_thread(get_newsletter_subscribers))}**\n\n"
+        "Сообщение получат только пользователи, которые сами включили рассылку.\n"
+        "Отправь текст, фото или видео.\n\n"
         "Для отмены напиши /cancel",
         parse_mode="Markdown",
     )
@@ -100,9 +135,15 @@ async def admin_broadcast_cancel(message: Message, state: FSMContext):
 
 @router.message(AdminBroadcast.message)
 async def admin_broadcast_send(message: Message, state: FSMContext):
-    users = get_all_users()
+    users = await asyncio.to_thread(get_newsletter_subscribers)
     await state.clear()
-    await message.answer(f"⏳ **Начинаю рассылку для {len(users)} пользователей...**")
+    if not users:
+        await message.answer(
+            "Пока нет подписчиков рассылки.",
+            reply_markup=main_menu(True),
+        )
+        return
+    await message.answer(f"⏳ **Начинаю рассылку для {len(users)} подписчиков...**")
     success, fail = 0, 0
     for user_id in users:
         try:
@@ -111,7 +152,7 @@ async def admin_broadcast_send(message: Message, state: FSMContext):
         except Exception:
             fail += 1
     await message.answer(
-        f"✅ **Рассылка завершена!**\n\nДоставлено: {success}\nЗаблокировали бота: {fail}",
+        f"✅ **Рассылка завершена!**\n\nДоставлено: {success}\nНе доставлено: {fail}",
         reply_markup=main_menu(True),
     )
 
@@ -165,8 +206,6 @@ async def admin_auto_buttons(call: CallbackQuery, state: FSMContext):
 
 @router.message(AdminAdForm.buttons, F.text == "/done")
 async def admin_simple_finish(message: Message, state: FSMContext, bot: Bot):
-    from bot import (MAIN_CLAN_CHANNEL, SALE_CHANNEL,
-                     TRADE_CHANNEL, SELL_ACC_CHANNEL, PODSLUSHKA_CHANNEL)
     data = await state.get_data()
     buttons = data.get("buttons", [])
     if not buttons:
@@ -247,8 +286,6 @@ async def admin_buttons_get_count(message: Message, state: FSMContext):
 
 @router.message(AdminButtonsOnly.buttons, F.text)
 async def admin_buttons_collect(message: Message, state: FSMContext, bot: Bot):
-    from bot import (MAIN_CLAN_CHANNEL, SALE_CHANNEL,
-                     TRADE_CHANNEL, SELL_ACC_CHANNEL, PODSLUSHKA_CHANNEL)
     data = await state.get_data()
     buttons = data.get("buttons", [])
     current = data.get("current", 0)
