@@ -85,6 +85,36 @@ def unlink_telegram_account(telegram_id):
     return True
 
 
+def set_newsletter_subscription(telegram_id, username, first_name, enabled):
+    """Persist explicit Telegram DM consent in the existing Firebase RTDB."""
+    now = int(datetime.now(timezone.utc).timestamp() * 1000)
+    _ref(f"telegram_newsletter_subscribers/{telegram_id}").set({
+        "telegramId": str(telegram_id),
+        "username": (username or "")[:64],
+        "firstName": (first_name or "")[:80],
+        "enabled": bool(enabled),
+        "updatedAt": now,
+    })
+    return bool(enabled)
+
+
+def is_newsletter_subscriber(telegram_id):
+    value = _ref(f"telegram_newsletter_subscribers/{telegram_id}").get()
+    return bool(value and value.get("enabled") is True)
+
+
+def get_newsletter_subscribers():
+    values = _ref("telegram_newsletter_subscribers").get() or {}
+    subscribers = []
+    for key, value in values.items():
+        if isinstance(value, dict) and value.get("enabled") is True:
+            try:
+                subscribers.append(int(value.get("telegramId") or key))
+            except (TypeError, ValueError):
+                continue
+    return subscribers
+
+
 def upload_photo(uid, submission_id, photo_bytes, content_type="image/jpeg"):
     if not initialize():
         raise RuntimeError("Firebase bridge is not configured")
