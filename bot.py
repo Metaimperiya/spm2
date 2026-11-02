@@ -1,22 +1,25 @@
 import asyncio
 import os
-import uvicorn
-from fastapi import FastAPI
 from aiogram import Bot, Dispatcher
-from aiogram.types import Update
-from contextlib import asynccontextmanager
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiohttp import web
 
 from handlers import user_handlers, admin_handlers, member_handlers
 from database import init_db
+from firebase_bridge import initialize, pending_telegram_listings, mark_listing_posted
+from html import escape
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
+if not BOT_TOKEN:
+    raise RuntimeError("Не задан BOT_TOKEN в переменных окружения.")
 
 # --- ГЛАВНЫЕ НАСТРОЙКИ ---
-ADMIN_USERNAME = "metaimperiya"
-# ТВОИ РЕАЛЬНЫЕ ID (УЖЕ ВПИСАНЫ!)
+# Администраторы проверяются только по неизменяемому Telegram ID.
 ADMIN_IDS = [806159173, 5493746865] 
-ADMIN_USERNAMES = ["metaimperiya", "cpm2trader"]
+
+def is_admin(user_or_id):
+    user_id = getattr(user_or_id, "id", user_or_id)
+    return user_id in ADMIN_IDS
 
 # --- КАНАЛЫ ---
 MAIN_CLAN_CHANNEL = "@cpm_2_clan"
@@ -32,33 +35,80 @@ dp.include_router(user_handlers.router)
 dp.include_router(admin_handlers.router)
 dp.include_router(member_handlers.router)
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+
+async def start_health_server():
+    """Keep Render Web Service healthy while the bot uses Telegram long polling."""
+    app = web.Application()
+    app.router.add_get("/health", lambda request: web.Response(text="ok"))
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", int(os.environ.get("PORT", "10000")))
+    await site.start()
+    return runner
+
+async def main():
     init_db()
-    if WEBHOOK_URL:
-        await bot.delete_webhook(drop_pending_updates=True)
-        webhook_path = f"{WEBHOOK_URL}/webhook"
-        await bot.set_webhook(webhook_path, allowed_updates=["message", "callback_query", "chat_member"])
-        print("Webhook установлен")
-    yield
-    await bot.session.close()
+    # render.yaml запускает background worker: для него используем long polling,
+    # которому не нужен публичный WEBHOOK_URL.
+    await bot.delete_webhook(drop_pending_updates=False)
+    bridge_ready = await asyncio.to_thread(initialize)
+    if bridge_ready:
+        sync_task = asyncio.create_task(sync_approved_cpm2_listings())
+    else:
+        sync_task = None
+    health_runner = await start_health_server()
+    try:
+        await dp.start_polling(bot, allowed_updates=dp.resolve_used_update_types())
+    finally:
+        await health_runner.cleanup()
+        if sync_task:
+            sync_task.cancel()
+            try:
+                await sync_task
+            except asyncio.CancelledError:
+                pass
+        await bot.session.close()
 
-app = FastAPI(lifespan=lifespan)
 
-@app.post("/webhook")
-async def webhook(update: dict):
-    telegram_update = Update(**update)
-    await dp.feed_update(bot, telegram_update)
-    return {"ok": True}
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
-
-@app.get("/")
-async def index():
-    return {"status": "bot is running"}
+async def sync_approved_cpm2_listings():
+    """Publish newly approved site listings once to their corresponding channel."""
+    while True:
+        try:
+            listings = await asyncio.to_thread(pending_telegram_listings, 100)
+            for listing_id, item in listings:
+                channel = TRADE_CHANNEL if item.get("dealMode") == "trade" else SALE_CHANNEL
+                price = item.get("price", "")
+                title = escape(str(item.get("title") or "Автомобиль")[:35])
+                description = escape(str(item.get("description") or "")[:35])
+                game_id = escape(str(item.get("gameId") or "")[:15])
+                city_country = escape(", ".join(part for part in [item.get("city"), item.get("country")] if part)[:20])
+                deal = "TRADE · Обмен" if item.get("dealMode") == "trade" else f"SELL · {escape(str(price))} CPM2"
+                body = f"🚘 <b>{deal}</b>\n<b>{title}</b>\n\n{description}"
+                if game_id:
+                    body += f"\n\n🆔 ID игрока: <code>{game_id}</code>"
+                contact = escape(str(item.get("telegramContact") or "")[:15])
+                if contact:
+                    body += f"\n💬 Связь: {contact}"
+                if city_country:
+                    body += f"\n📍 {city_country}"
+                keyboard = InlineKeyboardMarkup(inline_keyboard=[[
+                    InlineKeyboardButton(text="Открыть CPM2 на сайте", url="https://www.metaimperiya.com/?page=marketplace")
+                ]])
+                try:
+                    image_url = item.get("imageUrl")
+                    if image_url:
+                        sent = await bot.send_photo(channel, photo=image_url, caption=body, parse_mode="HTML", reply_markup=keyboard)
+                    else:
+                        sent = await bot.send_message(channel, body, parse_mode="HTML", reply_markup=keyboard)
+                    await asyncio.to_thread(mark_listing_posted, listing_id, channel, sent.message_id)
+                    await asyncio.sleep(0.4)
+                except Exception as error:
+                    print(f"Telegram sync failed for {listing_id} ({channel}): {error}")
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            print(f"Firebase listing sync error: {error}")
+        await asyncio.sleep(30)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    uvicorn.run("bot:app", host="0.0.0.0", port=port)
+    asyncio.run(main())
