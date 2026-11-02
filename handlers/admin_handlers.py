@@ -10,12 +10,8 @@ from database import approve_ad, get_ad_by_id, get_all_users
 router = Router()
 
 def is_admin_check(user):
-    from bot import ADMIN_USERNAMES, ADMIN_IDS
-    if user.id in ADMIN_IDS:
-        return True
-    if user.username and user.username.lower() in [u.lower() for u in ADMIN_USERNAMES]:
-        return True
-    return False
+    from bot import is_admin
+    return is_admin(user)
 
 # --- ОДОБРЕНИЕ / ОТКЛОНЕНИЕ ---
 @router.callback_query(F.data.startswith("approve_"))
@@ -53,8 +49,12 @@ async def approve_ad_callback(call: CallbackQuery, bot: Bot):
 
     for chat in set(channels):
         try:
-            await bot.send_photo(chat, photo=ad[10], caption=post_text,
-                                 reply_markup=kb.as_markup(), parse_mode="Markdown")
+            if len(ad) > 11 and ad[11] == "video":
+                await bot.send_video(chat, video=ad[10], caption=post_text,
+                                     reply_markup=kb.as_markup(), parse_mode="Markdown")
+            else:
+                await bot.send_photo(chat, photo=ad[10], caption=post_text,
+                                     reply_markup=kb.as_markup(), parse_mode="Markdown")
         except Exception as e:
             print(f"Ошибка approve в {chat}: {e}")
 
