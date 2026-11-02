@@ -1,9 +1,16 @@
 services:
-  - type: worker
+  - type: web
     name: cpm2-bot
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
+    healthCheckPath: /health
     envVars:
       - key: BOT_TOKEN
         sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: FIREBASE_DATABASE_URL
+        value: https://myecosystem-e6414-default-rtdb.firebaseio.com
+      - key: FIREBASE_STORAGE_BUCKET
+        value: myecosystem-e6414.firebasestorage.app
