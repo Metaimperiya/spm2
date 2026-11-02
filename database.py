@@ -20,9 +20,15 @@ def init_db():
         game_id TEXT,
         contact TEXT,
         photo_id TEXT,
+        media_type TEXT DEFAULT 'photo',
         status TEXT DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+
+    cursor.execute("PRAGMA table_info(ads)")
+    ad_columns = [row[1] for row in cursor.fetchall()]
+    if "media_type" not in ad_columns:
+        cursor.execute("ALTER TABLE ads ADD COLUMN media_type TEXT DEFAULT 'photo'")
 
     cursor.execute('''CREATE TABLE IF NOT EXISTS users (
         user_id INTEGER PRIMARY KEY,
@@ -34,12 +40,12 @@ def init_db():
     conn.commit()
     conn.close()
 
-def add_ad_to_db(user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id):
+def add_ad_to_db(user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id, media_type="photo"):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('''INSERT INTO ads (user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id)
-                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                   (user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id))
+    cursor.execute('''INSERT INTO ads (user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id, media_type)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                   (user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id, media_type))
     ad_id = cursor.lastrowid
     conn.commit()
     conn.close()
@@ -48,7 +54,7 @@ def add_ad_to_db(user_id, username, category, ad_type, title, description, price
 def get_ad_by_id(ad_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM ads WHERE id = ?', (ad_id,))
+    cursor.execute('SELECT id, user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id, media_type FROM ads WHERE id = ?', (ad_id,))
     row = cursor.fetchone()
     conn.close()
     return row
@@ -63,7 +69,7 @@ def approve_ad(ad_id):
 def get_approved_ads(category, ad_type):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM ads WHERE status = "approved" AND category = ? AND ad_type = ? ORDER BY id DESC', (category, ad_type))
+    cursor.execute('SELECT id, user_id, username, category, ad_type, title, description, price, game_id, contact, photo_id, media_type FROM ads WHERE status = "approved" AND category = ? AND ad_type = ? ORDER BY id DESC', (category, ad_type))
     rows = cursor.fetchall()
     conn.close()
     return rows
