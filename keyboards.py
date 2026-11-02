@@ -1,5 +1,6 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
@@ -108,7 +109,21 @@ def admin_panel_kb():
     kb = InlineKeyboardBuilder()
     kb.button(text="📢 Создать рекламный пост", callback_data="admin_post_simple")
     kb.button(text="🔗 Отправить только кнопки", callback_data="admin_buttons_only")
-    kb.button(text="📨 Сделать рассылку", callback_data="admin_broadcast")
+    kb.button(text="📨 Рассылка подписчикам", callback_data="admin_broadcast")
     kb.button(text="⬅️ Назад", callback_data="back_main")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
+
+
+def newsletter_settings_kb(enabled=False):
+    if enabled:
+        button = InlineKeyboardButton(
+            text="🔕 Отключить рассылку",
+            callback_data="newsletter_unsubscribe",
+        )
+    else:
+        button = InlineKeyboardButton(
+            text="🔔 Подписаться на рассылку",
+            callback_data="newsletter_subscribe",
+        )
+    return InlineKeyboardMarkup(inline_keyboard=[[button]])
