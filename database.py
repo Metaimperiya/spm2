@@ -34,8 +34,14 @@ def init_db():
         user_id INTEGER PRIMARY KEY,
         username TEXT,
         first_name TEXT,
+        language TEXT DEFAULT 'ru',
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )''')
+
+    cursor.execute("PRAGMA table_info(users)")
+    user_columns = [row[1] for row in cursor.fetchall()]
+    if "language" not in user_columns:
+        cursor.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'ru'")
 
     conn.commit()
     conn.close()
@@ -78,6 +84,28 @@ def add_user_to_db(user_id, username, first_name):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('INSERT OR IGNORE INTO users (user_id, username, first_name) VALUES (?, ?, ?)', (user_id, username, first_name))
+    is_new_user = cursor.rowcount == 1
+    if not is_new_user:
+        cursor.execute(
+            'UPDATE users SET username = ?, first_name = ? WHERE user_id = ?',
+            (username, first_name, user_id),
+        )
+    conn.commit()
+    conn.close()
+    return is_new_user
+
+def get_user_language(user_id, default="ru"):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT language FROM users WHERE user_id = ?", (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row and row[0] else default
+
+def set_user_language(user_id, language):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET language = ? WHERE user_id = ?", (language, user_id))
     conn.commit()
     conn.close()
 
@@ -88,3 +116,5 @@ def get_all_users():
     rows = cursor.fetchall()
     conn.close()
     return [row[0] for row in rows]
+
+
