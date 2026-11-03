@@ -1,6 +1,7 @@
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from locales import get_text, SUPPORTED_LANGUAGES
 
 ADMIN_USERNAME = "metaimperiya"
 SITE_URL = "https://www.metaimperiya.com/"
@@ -20,69 +21,71 @@ AUTO_BUTTONS = [
     ("🌐 Наш сайт", SITE_URL)
 ]
 
-def bottom_menu():
+def bottom_menu(lang="ru"):
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="📢 Подать объявление")],
-            [KeyboardButton(text="🏠 В главное меню")]
+            [KeyboardButton(text=get_text("btn_post", lang))],
+            [KeyboardButton(text=get_text("btn_main", lang))]
         ],
         resize_keyboard=True, is_persistent=True
     )
 
-def main_menu(is_admin=False):
+def main_menu(is_admin=False, lang="ru"):
     kb = InlineKeyboardBuilder()
-    kb.button(text="🚗 Автомобили", callback_data="menu_cars")
-    kb.button(text="👤 Аккаунты", callback_data="menu_accs")
-    kb.button(text="💵 Монеты / Услуги", callback_data="menu_money")
-    kb.button(text="🏁 Гонки", callback_data="join_race")
-    kb.button(text="💬 Сообщество", callback_data="menu_community")
+    kb.button(text=get_text("btn_ads", lang), callback_data="menu_cars")
+    kb.button(text=get_text("btn_accs", lang), callback_data="menu_accs")
+    kb.button(text=get_text("btn_money", lang), callback_data="menu_money")
+    kb.button(text=get_text("btn_races", lang), callback_data="join_race")
+    kb.button(text=get_text("btn_community", lang), callback_data="menu_community")
+    kb.button(text=get_text("btn_listening", lang), url="https://t.me/podslushkacpm2")
     if is_admin:
-        kb.button(text="👑 Админ-панель", callback_data="admin_panel")
-        kb.adjust(2, 2, 1, 1)
+        kb.button(text=get_text("btn_admin", lang), callback_data="admin_panel")
+        kb.adjust(2, 2, 1, 1, 1)
     else:
-        kb.adjust(2, 2, 1)
+        kb.adjust(2, 2, 1, 1)
+    kb.button(text=get_text("btn_lang", lang), callback_data="choose_language")
+    kb.adjust(2, 2, 1, 1, 1)
     return kb.as_markup()
 
-def cars_menu():
+def language_menu():
     kb = InlineKeyboardBuilder()
-    kb.button(text="💰 Продать машину", callback_data="car_sell")
-    kb.button(text="🔄 Обменять машину", callback_data="car_trade")
-    kb.button(text="🛒 Купить машину", callback_data="buy_car_catalog")
-    kb.button(text="⬅️ Назад", callback_data="back_main")
+    for code, label in SUPPORTED_LANGUAGES.items():
+        kb.button(text=label, callback_data=f"lang_{code}")
+    kb.adjust(2, 2, 2, 2, 2, 2, 2, 1)
+    return kb.as_markup()
+
+def cars_menu(lang="ru"):
+    kb = InlineKeyboardBuilder()
+    kb.button(text=get_text("btn_sell_car", lang), callback_data="car_sell")
+    kb.button(text=get_text("btn_trade_car", lang), callback_data="car_trade")
+    kb.button(text=get_text("btn_buy_car", lang), callback_data="buy_car_catalog")
+    kb.button(text=get_text("btn_back", lang), callback_data="back_main")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
-def accs_menu():
+def accs_menu(lang="ru"):
     kb = InlineKeyboardBuilder()
-    kb.button(text="💰 Продать аккаунт", callback_data="acc_sell")
-    kb.button(text="🛒 Купить аккаунт", callback_data="buy_acc_catalog")
-    kb.button(text="⬅️ Назад", callback_data="back_main")
+    kb.button(text=get_text("btn_sell_acc", lang), callback_data="acc_sell")
+    kb.button(text=get_text("btn_buy_acc", lang), callback_data="buy_acc_catalog")
+    kb.button(text=get_text("btn_back", lang), callback_data="back_main")
     kb.adjust(1, 1, 1)
     return kb.as_markup()
 
-def money_menu():
+def money_menu(lang="ru"):
     kb = InlineKeyboardBuilder()
-    kb.button(text="💰 Продать монеты", url=f"https://t.me/{ADMIN_USERNAME}")
-    kb.button(text="🛒 Купить монеты", url=f"https://t.me/{ADMIN_USERNAME}")
-    kb.button(text="💼 Услуги", url=f"https://t.me/{ADMIN_USERNAME}")
-    kb.button(text="⬅️ Назад", callback_data="back_main")
+    kb.button(text=get_text("btn_sell_coin", lang), url=f"https://t.me/{ADMIN_USERNAME}")
+    kb.button(text=get_text("btn_buy_coin", lang), url=f"https://t.me/{ADMIN_USERNAME}")
+    kb.button(text=get_text("btn_services", lang), url=f"https://t.me/{ADMIN_USERNAME}")
+    kb.button(text=get_text("btn_back", lang), callback_data="back_main")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
-# --- ВОТ ОНА, БОЛЬШАЯ КНОПКА ПОДСЛУШКИ ---
-def community_menu():
+def community_menu(lang="ru"):
     kb = InlineKeyboardBuilder()
-    
-    # 1. Первая кнопка - Подслушка
-    kb.button(text="👂 ПОДСЛУШКА CPM 2 (БОЛЬШАЯ)", url="https://t.me/podslushkacpm2") 
-    
-    # 2. Остальные кнопки
+    kb.button(text=get_text("btn_listening", lang), url="https://t.me/podslushkacpm2")
     for name, url in AUTO_BUTTONS:
         kb.button(text=name, url=url)
-        
-    kb.button(text="⬅️ Назад", callback_data="back_main")
-    
-    # Сетка: 1 кнопка сверху, потом по 2 в ряд
+    kb.button(text=get_text("btn_back", lang), callback_data="back_main")
     kb.adjust(1, 2, 2, 2, 2, 2, 2, 1)
     return kb.as_markup()
 
@@ -105,25 +108,25 @@ def admin_approve_kb(ad_id):
     kb.adjust(2)
     return kb.as_markup()
 
-def admin_panel_kb():
+def admin_panel_kb(lang="ru"):
     kb = InlineKeyboardBuilder()
-    kb.button(text="📢 Создать рекламный пост", callback_data="admin_post_simple")
-    kb.button(text="🔗 Отправить только кнопки", callback_data="admin_buttons_only")
-    kb.button(text="📨 Рассылка подписчикам", callback_data="admin_broadcast")
-    kb.button(text="⬅️ Назад", callback_data="back_main")
+    kb.button(text=get_text("create_post", lang), callback_data="admin_post_simple")
+    kb.button(text=get_text("buttons_only", lang), callback_data="admin_buttons_only")
+    kb.button(text=get_text("broadcast", lang), callback_data="admin_broadcast")
+    kb.button(text=get_text("back", lang), callback_data="back_main")
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
 
-def newsletter_settings_kb(enabled=False):
+def newsletter_settings_kb(enabled=False, lang="ru"):
     if enabled:
         button = InlineKeyboardButton(
-            text="🔕 Отключить рассылку",
+            text=get_text("btn_unsubscribe", lang),
             callback_data="newsletter_unsubscribe",
         )
     else:
         button = InlineKeyboardButton(
-            text="🔔 Подписаться на рассылку",
+            text=get_text("btn_subscribe", lang),
             callback_data="newsletter_subscribe",
         )
     return InlineKeyboardMarkup(inline_keyboard=[[button]])
