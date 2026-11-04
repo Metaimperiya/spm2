@@ -38,13 +38,13 @@ def main_menu(is_admin=False, lang="ru"):
     kb.button(text=get_text("btn_races", lang), callback_data="join_race")
     kb.button(text=get_text("btn_community", lang), callback_data="menu_community")
     kb.button(text=get_text("btn_listening", lang), url="https://t.me/podslushkacpm2")
+    kb.button(text=get_text("btn_newsletter", lang), callback_data="newsletter_settings")
+    kb.button(text=get_text("btn_lang", lang), callback_data="choose_language")
     if is_admin:
         kb.button(text=get_text("btn_admin", lang), callback_data="admin_panel")
-        kb.adjust(2, 2, 1, 1, 1)
+        kb.adjust(2, 2, 1, 2, 1)
     else:
-        kb.adjust(2, 2, 1, 1)
-    kb.button(text=get_text("btn_lang", lang), callback_data="choose_language")
-    kb.adjust(2, 2, 1, 1, 1)
+        kb.adjust(2, 2, 1, 2)
     return kb.as_markup()
 
 def language_menu():
@@ -129,4 +129,15 @@ def newsletter_settings_kb(enabled=False, lang="ru"):
             text=get_text("btn_subscribe", lang),
             callback_data="newsletter_subscribe",
         )
-    return InlineKeyboardMarkup(inline_keyboard=[[button]])
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [button],
+        [InlineKeyboardButton(text=get_text("btn_back", lang), callback_data="newsletter_back")],
+    ])
+
+
+def newsletter_done_kb(lang="ru"):
+    return InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text=get_text("btn_back", lang), callback_data="newsletter_back"),
+    ]])
+
+
