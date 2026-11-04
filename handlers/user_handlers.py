@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from states import AdForm, RaceForm
-from keyboards import main_menu, bottom_menu, cars_menu, accs_menu, money_menu, community_menu, newsletter_settings_kb, newsletter_done_kb, language_menu
+from keyboards import main_menu, cars_menu, accs_menu, money_menu, community_menu, newsletter_settings_kb, newsletter_done_kb, language_menu
 from database import add_ad_to_db, get_approved_ads, add_user_to_db, get_user_language, set_user_language
 from locales import get_text, SUPPORTED_LANGUAGES, TEXTS
 from firebase_bridge import (
@@ -96,7 +96,7 @@ async def change_newsletter_subscription(call: CallbackQuery):
         newsletter_status_text(enabled, lang),
         reply_markup=newsletter_done_kb(lang),
     )
-    await call.answer(get_text("lang_saved", lang))
+    await call.answer()
 
 
 @router.callback_query(F.data == "newsletter_settings")
@@ -216,8 +216,7 @@ async def set_language_callback(call: CallbackQuery):
     set_user_language(call.from_user.id, language)
     lang = language
     await call.message.edit_text(get_text("main_title", lang), reply_markup=main_menu(is_admin_check(call.from_user), lang), parse_mode="Markdown")
-    await call.message.answer(get_text("lang_saved", lang), reply_markup=bottom_menu(lang))
-    await call.answer(get_text("lang_saved", lang))
+    await call.answer()
 
 @router.message(F.text.in_(localized_button_values("btn_main")))
 async def bottom_back(message: Message, state: FSMContext):
