@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from states import AdForm, RaceForm
-from keyboards import main_menu, bottom_menu, cars_menu, accs_menu, money_menu, community_menu, newsletter_settings_kb, language_menu
+from keyboards import main_menu, bottom_menu, cars_menu, accs_menu, money_menu, community_menu, newsletter_settings_kb, newsletter_done_kb, language_menu
 from database import add_ad_to_db, get_approved_ads, add_user_to_db, get_user_language, set_user_language
 from locales import get_text, SUPPORTED_LANGUAGES, TEXTS
 from firebase_bridge import (
@@ -94,9 +94,36 @@ async def change_newsletter_subscription(call: CallbackQuery):
     lang = user_lang(call.from_user.id)
     await call.message.edit_text(
         newsletter_status_text(enabled, lang),
-        reply_markup=newsletter_settings_kb(enabled, lang),
+        reply_markup=newsletter_done_kb(lang),
     )
     await call.answer(get_text("lang_saved", lang))
+
+
+@router.callback_query(F.data == "newsletter_settings")
+async def open_newsletter_settings(call: CallbackQuery):
+    lang = user_lang(call.from_user.id)
+    try:
+        enabled = await asyncio.to_thread(is_newsletter_subscriber, call.from_user.id)
+    except Exception as error:
+        print(f"Telegram newsletter status error: {error}")
+        await call.answer(get_text("newsletter_error", lang), show_alert=True)
+        return
+    await call.message.edit_text(
+        newsletter_status_text(enabled, lang),
+        reply_markup=newsletter_settings_kb(enabled, lang),
+    )
+    await call.answer()
+
+
+@router.callback_query(F.data == "newsletter_back")
+async def close_newsletter_settings(call: CallbackQuery):
+    lang = user_lang(call.from_user.id)
+    await call.message.edit_text(
+        get_text("main_title", lang),
+        reply_markup=main_menu(is_admin_check(call.from_user), lang),
+        parse_mode="Markdown",
+    )
+    await call.answer()
 
 
 @router.message(F.text == "/subscribe")
@@ -120,7 +147,7 @@ async def newsletter_subscribe_command(message: Message):
         return
     await message.answer(
         newsletter_status_text(True, user_lang(message.from_user.id)),
-        reply_markup=newsletter_settings_kb(True, user_lang(message.from_user.id)),
+        reply_markup=newsletter_done_kb(user_lang(message.from_user.id)),
     )
 
 
@@ -145,7 +172,7 @@ async def newsletter_unsubscribe_command(message: Message):
         return
     await message.answer(
         get_text("newsletter_off", user_lang(message.from_user.id)),
-        reply_markup=newsletter_settings_kb(False, user_lang(message.from_user.id)),
+        reply_markup=newsletter_done_kb(user_lang(message.from_user.id)),
     )
 
 @router.message(F.text.regexp(r"^/start(?:@\w+)?(?:\s.*)?$"))
@@ -190,18 +217,6 @@ async def set_language_callback(call: CallbackQuery):
     lang = language
     await call.message.edit_text(get_text("main_title", lang), reply_markup=main_menu(is_admin_check(call.from_user), lang), parse_mode="Markdown")
     await call.message.answer(get_text("main_title", lang), reply_markup=bottom_menu(lang), parse_mode="Markdown")
-    try:
-        subscribed = await asyncio.to_thread(
-            is_newsletter_subscriber,
-            call.from_user.id,
-        )
-    except Exception as error:
-        print(f"Telegram newsletter status error: {error}")
-        subscribed = False
-    await call.message.answer(
-        newsletter_status_text(subscribed, lang),
-        reply_markup=newsletter_settings_kb(subscribed, lang),
-    )
     await call.answer(get_text("lang_saved", lang))
 
 @router.message(F.text.in_(localized_button_values("btn_main")))
