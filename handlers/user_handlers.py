@@ -216,7 +216,7 @@ async def set_language_callback(call: CallbackQuery):
     set_user_language(call.from_user.id, language)
     lang = language
     await call.message.edit_text(get_text("main_title", lang), reply_markup=main_menu(is_admin_check(call.from_user), lang), parse_mode="Markdown")
-    await call.message.answer(get_text("main_title", lang), reply_markup=bottom_menu(lang), parse_mode="Markdown")
+    await call.message.answer(get_text("lang_saved", lang), reply_markup=bottom_menu(lang))
     await call.answer(get_text("lang_saved", lang))
 
 @router.message(F.text.in_(localized_button_values("btn_main")))
