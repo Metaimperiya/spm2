@@ -80,37 +80,9 @@ async def approve_ad_callback(call: CallbackQuery, bot: Bot):
         except Exception as e:
             print(f"Ошибка approve в {chat}: {e}")
 
-    # Личные объявления получают только пользователи, явно включившие рассылку.
-    subscribers = await asyncio.to_thread(get_newsletter_subscribers)
-    delivered = 0
-    for user_id in subscribers:
-        try:
-            subscriber_lang = get_user_language(user_id)
-            subscriber_caption = ad_caption(ad, subscriber_lang)
-            subscriber_kb = ad_post_keyboard(subscriber_lang)
-            if len(ad) > 11 and ad[11] == "video":
-                await bot.send_video(
-                    user_id,
-                    video=ad[10],
-                    caption=subscriber_caption,
-                    reply_markup=subscriber_kb,
-                    parse_mode="Markdown",
-                )
-            else:
-                await bot.send_photo(
-                    user_id,
-                    photo=ad[10],
-                    caption=subscriber_caption,
-                    reply_markup=subscriber_kb,
-                    parse_mode="Markdown",
-                )
-            delivered += 1
-        except Exception as e:
-            print(f"Не удалось отправить объявление подписчику {user_id}: {e}")
-
-    await call.message.edit_caption(caption=admin_text(
-        call.from_user.id, "approved_caption", id=ad_id, sent=delivered, total=len(subscribers)
-    ))
+    # User-submitted listings go to the configured Telegram groups only.
+    # Newsletter delivery remains available for explicit admin broadcasts.
+    await call.message.edit_caption(caption=admin_text(call.from_user.id, "approved"))
     await call.answer(admin_text(call.from_user.id, "approved"))
 
 @router.callback_query(F.data.startswith("reject_"))
