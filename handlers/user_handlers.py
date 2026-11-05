@@ -6,11 +6,9 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from states import AdForm, RaceForm
 from keyboards import main_menu, cars_menu, accs_menu, money_menu, community_menu, newsletter_settings_kb, newsletter_done_kb, language_menu
 from database import add_ad_to_db, get_approved_ads, add_user_to_db, get_user_language, set_user_language
-from locales import get_text, SUPPORTED_LANGUAGES, TEXTS
+from locales import get_text, SUPPORTED_LANGUAGES
 from firebase_bridge import (
     consume_link_code,
-    create_garage_submission,
-    get_linked_uid,
     initialize,
     unlink_telegram_account,
     is_newsletter_subscriber,
@@ -18,7 +16,6 @@ from firebase_bridge import (
 )
 from bot_config import ADMIN_IDS, is_admin
 import asyncio
-import re
 
 router = Router()
 
@@ -281,14 +278,6 @@ async def bottom_create_ad(message: Message, state: FSMContext):
 @router.callback_query(F.data.in_({"car_sell", "car_trade", "acc_sell"}))
 async def process_ad_type(call: CallbackQuery, state: FSMContext):
     cat = "acc" if call.data == "acc_sell" else "car"
-    if cat == "car":
-        try:
-            linked = await asyncio.to_thread(get_linked_uid, call.from_user.id)
-        except Exception:
-            linked = None
-        if not linked:
-            await call.answer(translated(call.from_user.id, "need_site_link"), show_alert=True)
-            return
     await state.update_data(category=cat, ad_type=call.data)
     await state.set_state(AdForm.media)
     await call.message.edit_text(translated(call.from_user.id, "send_media"), parse_mode="Markdown")
@@ -344,10 +333,6 @@ async def ad_game_id(message: Message, state: FSMContext):
 async def ad_contact(message: Message, state: FSMContext):
     await state.update_data(contact=message.text)
     data = await state.get_data()
-    if data.get("category") == "car":
-        await state.set_state(AdForm.country)
-        await message.answer(translated(message.from_user.id, "country_prompt"))
-        return
     await finish_legacy_ad(message, state, data)
 
 async def finish_legacy_ad(message: Message, state: FSMContext, data):
@@ -376,64 +361,6 @@ async def finish_legacy_ad(message: Message, state: FSMContext, data):
     await state.clear()
     lang = user_lang(message.from_user.id)
     await message.answer(get_text("ad_submitted", lang, id=ad_id), reply_markup=main_menu(False, lang), parse_mode="Markdown")
-
-@router.message(AdForm.country, F.text)
-async def ad_country(message: Message, state: FSMContext):
-    country = message.text.strip()
-    if not 2 <= len(country) <= 80:
-        await message.answer(translated(message.from_user.id, "country_invalid"))
-        return
-    await state.update_data(country=country)
-    await state.set_state(AdForm.country_code)
-    await message.answer(translated(message.from_user.id, "country_code_prompt"))
-
-@router.message(AdForm.country_code, F.text)
-async def ad_country_code(message: Message, state: FSMContext):
-    country_code = message.text.strip().upper()
-    if not re.fullmatch(r"[A-Z]{2}", country_code):
-        await message.answer(translated(message.from_user.id, "country_code_invalid"))
-        return
-    await state.update_data(country_code=country_code)
-    await state.set_state(AdForm.city)
-    await message.answer(translated(message.from_user.id, "city_prompt"))
-
-@router.message(AdForm.city, F.text)
-async def ad_city(message: Message, state: FSMContext):
-    city = message.text.strip()
-    if not 1 <= len(city) <= 80:
-        await message.answer(translated(message.from_user.id, "city_invalid"))
-        return
-    data = await state.get_data()
-    try:
-        file = await message.bot.get_file(data["media"])
-        from io import BytesIO
-        photo = BytesIO()
-        await message.bot.download_file(file.file_path, destination=photo)
-        trade_mode = data["ad_type"] == "car_trade"
-        uid, submission_id = await asyncio.to_thread(
-            create_garage_submission, message.from_user.id, data["title"], data["description"],
-            int(data["price"]), data["game_id"], data["contact"], photo.getvalue(),
-            data["country"], data["country_code"], city, "trade" if trade_mode else "sell",
-            data["description"] if trade_mode else "", message.from_user.full_name,
-        )
-    except (ValueError, KeyError):
-        await message.answer(translated(message.from_user.id, "price_invalid"))
-        return
-    except Exception as error:
-        print(f"Firebase garage submission error: {error}")
-        await message.answer(translated(message.from_user.id, "site_submit_failed"))
-        return
-    for admin_id in ADMIN_IDS:
-        try:
-            await message.bot.send_message(admin_id,
-                f"Новая заявка CPM2 из Telegram\n{data['title']} · {'TRADE' if trade_mode else 'SELL'}\n"
-                f"ID игрока: {data['game_id']}\nUID сайта: {uid}\nЗаявка: {submission_id}\n"
-                "Открой CPM2 → комиссионный гараж на сайте для модерации.")
-        except Exception:
-            pass
-    await state.clear()
-    lang = user_lang(message.from_user.id)
-    await message.answer(get_text("site_submission_ok", lang), reply_markup=main_menu(False, lang))
 
 # ================== ГОНКИ ==================
 @router.callback_query(F.data == "join_race")
