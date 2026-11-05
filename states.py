@@ -10,9 +10,6 @@ class AdForm(StatesGroup):
     price = State()
     game_id = State()
     contact = State()
-    country = State()
-    country_code = State()
-    city = State()
 
 
 class RaceForm(StatesGroup):
