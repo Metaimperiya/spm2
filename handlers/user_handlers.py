@@ -4,13 +4,14 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from states import AdForm, RaceForm
-from keyboards import main_menu, cars_menu, accs_menu, money_menu, community_menu, newsletter_settings_kb, newsletter_done_kb, language_menu
+from keyboards import main_menu, cars_menu, car_buy_actions_menu, accs_menu, money_menu, community_menu, newsletter_settings_kb, newsletter_done_kb, language_menu
 from database import add_ad_to_db, get_approved_ads, add_user_to_db, get_user_language, set_user_language
 from locales import get_text, SUPPORTED_LANGUAGES
 from firebase_bridge import (
     consume_link_code,
     initialize,
     unlink_telegram_account,
+    get_approved_site_car_listings,
     is_newsletter_subscriber,
     set_newsletter_subscription,
 )
@@ -234,6 +235,12 @@ async def show_cars(call: CallbackQuery):
     await call.message.edit_text(get_text("cars_title", lang), reply_markup=cars_menu(lang))
     await call.answer()
 
+@router.callback_query(F.data == "buy_car_catalog")
+async def show_car_buy_actions(call: CallbackQuery):
+    lang = user_lang(call.from_user.id)
+    await call.message.edit_text(get_text("buy_car_prompt", lang), reply_markup=car_buy_actions_menu(lang), parse_mode="Markdown")
+    await call.answer()
+
 @router.callback_query(F.data == "menu_accs")
 async def show_accs(call: CallbackQuery):
     lang = user_lang(call.from_user.id)
@@ -275,10 +282,11 @@ async def bottom_create_ad(message: Message, state: FSMContext):
         kb.adjust(1, 1, 1, 1)
         await message.answer(translated(message.from_user.id, "choose_action"), reply_markup=kb.as_markup(), parse_mode="Markdown")
 
-@router.callback_query(F.data.in_({"car_sell", "car_trade", "acc_sell"}))
+@router.callback_query(F.data.in_({"car_sell", "car_trade", "acc_sell", "buy_car_post"}))
 async def process_ad_type(call: CallbackQuery, state: FSMContext):
     cat = "acc" if call.data == "acc_sell" else "car"
-    await state.update_data(category=cat, ad_type=call.data)
+    ad_type = "car_sell" if call.data == "buy_car_post" else call.data
+    await state.update_data(category=cat, ad_type=ad_type)
     await state.set_state(AdForm.media)
     await call.message.edit_text(translated(call.from_user.id, "send_media"), parse_mode="Markdown")
     await call.answer()
@@ -416,34 +424,83 @@ async def race_car(message: Message, state: FSMContext):
     await message.answer(get_text("race_accepted", lang), reply_markup=main_menu(False, lang), parse_mode="Markdown")
 
 # ================== КАТАЛОГ ==================
-@router.callback_query(F.data.in_({"buy_car_catalog", "buy_acc_catalog"}))
-async def show_catalog(call: CallbackQuery):
-    cat = "car" if call.data == "buy_car_catalog" else "acc"
-    ads = get_approved_ads(cat, "car_sell" if cat == "car" else "acc_sell")
+@router.callback_query(F.data == "buy_car_browse")
+async def show_site_car_catalog(call: CallbackQuery):
+    lang = user_lang(call.from_user.id)
+    try:
+        site_ads = await asyncio.to_thread(get_approved_site_car_listings, 50)
+    except Exception as error:
+        print(f"Website car catalog unavailable: {error}")
+        site_ads = []
+    legacy_ads = get_approved_ads("car", "car_sell") + get_approved_ads("car", "car_trade")
+    if not site_ads and not legacy_ads:
+        await call.message.edit_text(get_text("catalog_empty", lang), reply_markup=car_buy_actions_menu(lang), parse_mode="Markdown")
+        await call.answer()
+        return
+
+    await call.message.edit_text(get_text("catalog_results", lang, count=len(site_ads) + len(legacy_ads)), reply_markup=car_buy_actions_menu(lang), parse_mode="Markdown")
+    site_url = "https://www.metaimperiya.com/?page=marketplace"
+    for item in site_ads[:10]:
+        price = item.get("price") or "—"
+        is_trade = item.get("dealMode") == "trade"
+        mode = "Обмен · Ищет: " + str(item.get("tradeFor") or "предложения") if is_trade else f"Продажа · {price} CPM2"
+        location = ", ".join(part for part in (item.get("city"), item.get("country")) if part)
+        text = (f"🚗 {item.get('title') or 'Автомобиль'}\n\n{item.get('description') or ''}\n\n"
+                f"💰 {mode}\n📍 {location or 'Локация не указана'}\n🆔 ID: {item.get('gameId') or 'не указан'}")
+        kb = InlineKeyboardBuilder()
+        contact = str(item.get("telegramContact") or "").strip().lstrip("@")
+        if contact and contact.replace("_", "").isalnum():
+            kb.button(text=get_text("btn_contact_seller", lang), url=f"https://t.me/{contact}")
+        kb.button(text=get_text("btn_open_site_catalog", lang), url=site_url)
+        kb.adjust(1)
+        image_url = item.get("imageUrl")
+        try:
+            if image_url:
+                await call.message.answer_photo(photo=image_url, caption=text[:1024], reply_markup=kb.as_markup())
+            else:
+                await call.message.answer(text[:4000], reply_markup=kb.as_markup())
+        except Exception as error:
+            print(f"Unable to show website listing {item.get('id')}: {error}")
+            await call.message.answer(text[:4000], reply_markup=kb.as_markup())
+
+    for ad in legacy_ads[:5]:
+        text = (f"🚗 {ad[5]}\n\n{ad[6]}\n\n💰 {ad[7]}\n🆔 ID: {ad[8]}\n📞 {ad[9]}")
+        kb = InlineKeyboardBuilder()
+        contact = ad[9].replace('@', '') if ad[9] else ""
+        if contact:
+            kb.button(text=get_text("btn_contact_seller", lang), url=f"https://t.me/{contact}")
+        kb.button(text=get_text("btn_back", lang), callback_data="buy_car_catalog")
+        kb.adjust(1)
+        try:
+            if len(ad) > 11 and ad[11] == "video":
+                await call.message.answer_video(video=ad[10], caption=text[:1024], reply_markup=kb.as_markup())
+            else:
+                await call.message.answer_photo(photo=ad[10], caption=text[:1024], reply_markup=kb.as_markup())
+        except Exception:
+            await call.message.answer(text[:4000], reply_markup=kb.as_markup())
+    await call.answer()
+
+@router.callback_query(F.data == "buy_acc_catalog")
+async def show_account_catalog(call: CallbackQuery):
+    lang = user_lang(call.from_user.id)
+    ads = get_approved_ads("acc", "acc_sell")
     if not ads:
-        lang = user_lang(call.from_user.id)
         await call.message.edit_text(get_text("catalog_empty", lang), reply_markup=main_menu(False, lang), parse_mode="Markdown")
         await call.answer()
         return
     for ad in ads[:5]:
-        lang = user_lang(call.from_user.id)
-        text = (
-            f"🚗 **{ad[5]}**\n\n{ad[6]}\n\n"
-            f"💰 **{get_text('catalog_price', lang)}:** {ad[7]}\n"
-            f"🆔 **{get_text('catalog_game_id', lang)}:** `{ad[8]}`\n"
-            f"📞 **{get_text('catalog_contact', lang)}:** {ad[9]}"
-        )
+        text = f"👤 {ad[5]}\n\n{ad[6]}\n\n💰 {ad[7]}\n📞 {ad[9]}"
         kb = InlineKeyboardBuilder()
         contact = ad[9].replace('@', '') if ad[9] else ""
         if contact:
             kb.button(text=get_text("btn_contact_seller", lang), url=f"https://t.me/{contact}")
         kb.button(text=get_text("btn_back", lang), callback_data="back_main")
-        kb.adjust(1, 1)
+        kb.adjust(1)
         try:
             if len(ad) > 11 and ad[11] == "video":
-                await call.message.answer_video(video=ad[10], caption=text, reply_markup=kb.as_markup(), parse_mode="Markdown")
+                await call.message.answer_video(video=ad[10], caption=text[:1024], reply_markup=kb.as_markup())
             else:
-                await call.message.answer_photo(photo=ad[10], caption=text, reply_markup=kb.as_markup(), parse_mode="Markdown")
+                await call.message.answer_photo(photo=ad[10], caption=text[:1024], reply_markup=kb.as_markup())
         except Exception:
-            await call.message.answer(text, reply_markup=kb.as_markup(), parse_mode="Markdown")
+            await call.message.answer(text[:4000], reply_markup=kb.as_markup())
     await call.answer()
