@@ -155,6 +155,19 @@ def pending_telegram_listings(limit=50):
             and value.get("telegramSyncState") != "posted"]
 
 
+def get_approved_site_car_listings(limit=50):
+    """Return active, approved CPM2 car listings from the website catalog."""
+    values = _ref("marketplace_listings").order_by_child("createdAt").limit_to_last(limit).get() or {}
+    listings = []
+    for listing_id, value in values.items():
+        if not isinstance(value, dict):
+            continue
+        if (value.get("cpm2Broker") is True and value.get("moderationStatus") == "approved"
+                and value.get("isActive") is True and value.get("brokerStatus") == "in_stock"):
+            listings.append({"id": listing_id, **value})
+    return sorted(listings, key=lambda item: item.get("createdAt", 0), reverse=True)
+
+
 def mark_listing_posted(listing_id, channel, message_id):
     _ref(f"marketplace_listings/{listing_id}").update({
         "telegramSyncState": "posted", "telegramPostedAt": int(datetime.now(timezone.utc).timestamp() * 1000),
