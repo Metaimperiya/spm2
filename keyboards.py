@@ -63,6 +63,14 @@ def cars_menu(lang="ru"):
     kb.adjust(1, 1, 1, 1)
     return kb.as_markup()
 
+def car_buy_actions_menu(lang="ru"):
+    kb = InlineKeyboardBuilder()
+    kb.button(text=get_text("btn_browse_cars", lang), callback_data="buy_car_browse")
+    kb.button(text=get_text("btn_post_car", lang), callback_data="buy_car_post")
+    kb.button(text=get_text("btn_back", lang), callback_data="menu_cars")
+    kb.adjust(1, 1, 1)
+    return kb.as_markup()
+
 def accs_menu(lang="ru"):
     kb = InlineKeyboardBuilder()
     kb.button(text=get_text("btn_sell_acc", lang), callback_data="acc_sell")
